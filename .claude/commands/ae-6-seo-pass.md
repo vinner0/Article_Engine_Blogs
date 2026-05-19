@@ -3,7 +3,7 @@ description: Stage 6 — run the 80-item SEO checklist, insert links per budget,
 argument-hint: <slug>
 ---
 
-# /blog-6-seo-pass
+# /ae-6-seo-pass
 
 You are running **Stage 6** of the Article Engine pipeline (trainingint.com) for slug: `$ARGUMENTS`.
 
@@ -16,6 +16,7 @@ You are running **Stage 6** of the Article Engine pipeline (trainingint.com) for
 - `seo/checklist.md` — the 80+ item canonical checklist
 - `seo/link-budget.md` — link rules
 - `seo/pillar-map.yaml` — for related blog posts in same/adjacent pillar + course-link assignments
+- `src/lib/link-budget.ts` — programmatic validator
 - `src/data/courses.json` and the published-log to find existing trainingint.com blog posts for internal linking
 
 ## Outputs (write both before declaring success)
@@ -34,8 +35,8 @@ You are running **Stage 6** of the Article Engine pipeline (trainingint.com) for
 - **Authoritative outbound:** 1–2 (SSG, MOM, HBR, peer-reviewed), `target="_blank" rel="noopener"`, never `rel="sponsored"`.
 - **Snippet-bait checks**: TL;DR/answer-first paragraph in first 100 words, table or list under at least one H2, FAQ block present
 - **Image alt check**: every image has 8–80 char descriptive alt; hero alt is rich (subjects + setting + tone)
+- **Inline images:** reference every inline image as `<img src="ae:img:<filename>" alt="<descriptive alt>">` where `<filename>` is the file in `content/trainingint/$ARGUMENTS/images/` (hero stays the featured image, set at publish). This mirrors the `ae:sibling:` placeholder — scripts/wp_publish.py uploads each referenced image to WP media and rewrites the src to the live URL at publish (spec §8.2). Never emit a raw local path or an un-prefixed remote Pexels URL in the body.
 - **Schema:** build JSON-LD via `python -c "from scripts.lib.jsonld import build_jsonld; ..."`; pass `suppress={'FAQPage','BreadcrumbList'}` for any type the active SEO plugin already emits (config/sites.yaml probe.seo_plugin_emits_graph). Embed the returned `<script type="application/ld+json">` block at the end of the HTML body.
-- **Inline images:** reference every inline image as `<img src="ae:img:<filename>" alt="<descriptive alt>">` where `<filename>` is the file in `content/trainingint/$ARGUMENTS/images/`. Mirrors the `ae:sibling:` placeholder — scripts/wp_publish.py uploads each to WP media and rewrites the src to the live URL at publish (spec §8.2). Never emit a raw local path or an un-prefixed remote Pexels URL in the body.
 
 ## What `seo-checklist.md` must contain
 The full 80-item checklist from `seo/checklist.md`, with per-item:
@@ -44,7 +45,9 @@ The full 80-item checklist from `seo/checklist.md`, with per-item:
 - A summary at top: total pass / total fail / blockers
 
 ## VOICE-DAMAGE CHECK (hard gate — refuse to overwrite if it fires)
+Before writing `04-seo.html`:
 Compute programmatically: python -c "from scripts.lib.ngram import voice_survival_ratio as v; print(v(open('content/trainingint/$ARGUMENTS/_draft/04-seo.html',encoding='utf-8').read(), open('content/trainingint/$ARGUMENTS/_draft/03-voice.md',encoding='utf-8').read()))". If < 0.85, STOP, show the diff, do not write 04-seo.html.
+The SEO pass is for **structure, metadata, links** — it is NOT a rewrite. If you're tempted to rewrite a sentence "for clarity" or "for SEO", don't — that's voice damage.
 
 Acceptable changes that don't trigger the check:
 - Adding link anchors over existing text
@@ -58,15 +61,21 @@ Run scripts.lib.originality.originality_report(article, open('voice/stories.md')
 ## Link budget validator
 Build the link inventory dict and run scripts.lib.link_budget.validate_links(inv, budget) where budget = config/sites.yaml sites.trainingint.link_budget. If it returns any violations, fix and revalidate before writing 04-seo.html.
 
+## N-GRAM ANTI-PLAGIARISM (hard gate — refuse to write 04-seo.html if it fires)
+python -c "from scripts.lib.ngram import overlap_8gram; from glob import glob; a=open('content/trainingint/$ARGUMENTS/_draft/04-seo.html',encoding='utf-8').read(); bad=[(f,overlap_8gram(a,open(f,encoding='utf-8').read())) for f in glob('content/trainingint/$ARGUMENTS/_research/serp-bodies/*.txt')]; bad=[(f,h) for f,h in bad if h]; print('PLAGIARISM:',bad) if bad else print('PASS')"
+If any serp-body returns a non-empty overlap list, STOP, name the overlapping 8-word phrase(s), and do NOT write 04-seo.html. (Same contract as ae-8 gate 5.)
+
 ## Process
 1. Confirm Stage 5 (human edit) is done
 2. Read `03-voice.md`, `seo/checklist.md`, `seo/link-budget.md`, `pillar-map.yaml`
 3. Identify candidate internal links (other blog posts + courses) and outbound authoritative links
-4. Plan all changes; do the voice-damage check on the planned diff
-5. If clean, write `04-seo.html`
-6. Run the 80-item checklist; write `seo-checklist.md`
-7. Run the link budget validator
-8. Confirm originality gate
+4. Plan all changes (structure, metadata, links) — assemble the candidate `04-seo.html` in memory; do NOT write it yet
+5. **Gate 1 — voice-damage:** run `voice_survival_ratio`; if < 0.85, STOP, show the diff, do not write
+6. **Gate 2 — n-gram anti-plagiarism:** run `overlap_8gram` vs every `_research/serp-bodies/*.txt`; if any non-empty, STOP, name the phrase, do not write
+7. **Gate 3 — link budget:** run `validate_links(inv, budget)`; if any violations, fix and revalidate, do not write
+8. **Gate 4 — originality:** run `originality_report(...)`; if `passes` is False, surface to the user, do not write
+9. Only if ALL FOUR gates passed, write `04-seo.html`
+10. Run the 80-item checklist; write `seo-checklist.md`
 
 ## Refuse to proceed if
 - Stage 4 output (`03-voice.md`) is missing
