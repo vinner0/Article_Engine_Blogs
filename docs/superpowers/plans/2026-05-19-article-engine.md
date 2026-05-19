@@ -12,7 +12,7 @@
 
 **v2 changes (from independent plan audit 2026-05-19):** B1/B2 — port transforms made deterministic, verify steps aligned to real source strings. M3 — idempotency reworked: an **always-installed** helper plugin registers `ae_content_uid` (show_in_rest) and a server-side `/ae/v1/find` route, because stock WP REST cannot query unregistered meta and silently drops it. M4 — Task 11 now uploads featured media + resolves internal links. M5 — ae-8 hard-gates on all required probe fields. M6/M7/M8 — ae-6 link-section retargeted to trainingint; Bash-tool note; jsonld gets a real adversarial test.
 
-**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan). **N2 (per-task quality review, Task 5)** same defect class in `scripts/lib/originality.py`: `_has_framework` matched only markdown `1./-/*` so it returned False on the real HTML `04-seo.html` (silently degrading the ≥2-of-4 gate); `_has_stat` matched any >6-char fragment so non-numeric `stats.md` lines (course names, bio, headers) false-passed; `_has_analogy` fired on "like you"; `_has_story` matched YAML-key noise. Fixed: framework counts HTML `<li>` + markdown; stat requires a digit; analogy requires a `like a/an/the` simile (or explicit cue); story skips YAML/header/blockquote lines. New real-input adversarial tests (real voice files + HTML article). **C2a left for owner:** `_has_story` is still verbatim-prefix (won't detect paraphrased signature stories) — flagged in Task 5 for an owner design decision, deliberately NOT auto-redesigned.
+**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan). **N2 (per-task quality review, Task 5)** same defect class in `scripts/lib/originality.py`: `_has_framework` matched only markdown `1./-/*` so it returned False on the real HTML `04-seo.html` (silently degrading the ≥2-of-4 gate); `_has_stat` matched any >6-char fragment so non-numeric `stats.md` lines (course names, bio, headers) false-passed; `_has_analogy` fired on "like you"; `_has_story` matched YAML-key noise. Fixed: framework counts HTML `<li>` + markdown; stat requires a digit; analogy requires a `like a/an/the` simile (or explicit cue); story skips YAML/header/blockquote lines. New real-input adversarial tests (real voice files + HTML article). **C2a left for owner:** `_has_story` is still verbatim-prefix (won't detect paraphrased signature stories) — flagged in Task 5 for an owner design decision, deliberately NOT auto-redesigned. **N3 (per-task quality review, Task 6)** `scripts/lib/link_budget.validate_links` had no code defect but 5 of 10 violation branches had zero tests (a `return []` stub passed them — and Task 14 wires this as a HARD publish gate), it dropped link-budget.md L13's "no naked URLs as anchor" rule, and a missing inv key (the dict is built by ae-6 in LLM prose) crashed with a bare `KeyError`. Fixed: added naked-URL ban (source-faithful), missing-key → named `inventory_incomplete` violation (fail diagnostic not crash), and 6 adversarial tests so every violation branch + the missing-key path is constrained.
 
 **Reuse-verification (filesystem-checked + audit-confirmed 2026-05-19):** `D:/VP/BLOG_AUDIT/` = 0 Python, nothing forked. Verified sources used: softskills `.claude/commands/blog-{1,2,3,4,6,8}-*.md`, `voice/*.md` (6), `seo/{checklist,link-budget,schema-templates}.md + audit-budgets.yaml + pillar-map.yaml`. Audit confirmed all exist; transform strings below were checked against the real files.
 
@@ -382,7 +382,7 @@ Ported from rules in `D:/vp/softskills/1-NEW-SSKILLS/seo/link-budget.md` (audit-
 
 **Files:** Create `scripts/lib/link_budget.py`, `tests/test_link_budget.py`
 
-- [ ] **Step 1: Failing tests (incl. adversarial)** — `tests/test_link_budget.py`:
+- [ ] **Step 1: Failing tests (incl. adversarial — every violation branch constrained; N3)** — `tests/test_link_budget.py`:
 ```python
 from scripts.lib.link_budget import validate_links
 B={"internal_sibling_min":2,"internal_sibling_max":3,"primary_course_distinct":1,
@@ -412,11 +412,51 @@ def test_dup_anchor_and_spam():
     v=validate_links(inv,B)
     assert any("identical_anchor" in x for x in v)
     assert any("same_paragraph" in x for x in v)
+def test_internal_sibling_max():           # ADVERSARIAL: previously-untested branch
+    inv={"internal_sibling":["/a","/b","/c","/d"],"primary_course":["u"],
+         "secondary_course":[],"authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b","c","d"],"same_paragraph_domains":[]}
+    assert any("internal_sibling_max" in x for x in validate_links(inv,B))
+def test_primary_course_distinct():        # ADVERSARIAL: previously-untested branch
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u1","u2"],
+         "secondary_course":[],"authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b"],"same_paragraph_domains":[]}
+    assert any("primary_course_distinct" in x for x in validate_links(inv,B))
+def test_secondary_course_max():           # ADVERSARIAL: previously-untested branch
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],
+         "secondary_course":["s1","s2","s3","s4"],
+         "authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b"],"same_paragraph_domains":[]}
+    assert any("secondary_course_max" in x for x in validate_links(inv,B))
+def test_authoritative_max_and_naked_url_anchor():  # ADVERSARIAL: untested branch + source rule
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],"secondary_course":[],
+         "authoritative_outbound":["https://a.gov","https://b.org","https://c.edu"],
+         "anchors":["https://naked-url.example/page","a normal anchor"],
+         "same_paragraph_domains":[]}
+    v=validate_links(inv,B)
+    assert any("authoritative_outbound_max" in x for x in v)
+    assert any("naked URL" in x for x in v)
+def test_banned_generic_anchor():          # ADVERSARIAL: previously-untested branch
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],"secondary_course":[],
+         "authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["Click Here","read more"],"same_paragraph_domains":[]}
+    assert any("banned_anchor: generic" in x for x in validate_links(inv,B))
+def test_missing_inventory_key_is_named_violation():  # gate fed by LLM-built dict
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],
+         "secondary_course":[],"authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b"]}  # missing same_paragraph_domains
+    v=validate_links(inv,B)
+    assert v and any("inventory_incomplete" in x for x in v)
 ```
 - [ ] **Step 2: Run, verify fail** — FAIL.
-- [ ] **Step 3: Implement** — `scripts/lib/link_budget.py`:
+- [ ] **Step 3: Implement** — `scripts/lib/link_budget.py` (v2.1 N3: missing-key fail-safe + source-faithful naked-URL ban):
 ```python
+_REQ=("internal_sibling","primary_course","secondary_course",
+      "authoritative_outbound","anchors","same_paragraph_domains")
 def validate_links(inv, budget):
+    missing=[k for k in _REQ if k not in inv]
+    if missing:                       # ae-6 builds inv in prose — fail diagnostic, not KeyError
+        return [f"inventory_incomplete: missing keys {missing}"]
     v=[]
     sib=inv["internal_sibling"]
     if len(sib)<budget["internal_sibling_min"]:
@@ -440,11 +480,13 @@ def validate_links(inv, budget):
         v.append("identical_anchor: two or more anchors identical")
     if any(a in {"click here","learn more","read more","here"} for a in anchors):
         v.append("banned_anchor: generic anchor present")
+    if any(a.startswith(("http://","https://","www.")) for a in anchors):
+        v.append("banned_anchor: naked URL used as anchor")  # link-budget.md L13
     if inv["same_paragraph_domains"]:
         v.append(f"same_paragraph: domain repeated in one paragraph ({inv['same_paragraph_domains']})")
     return v
 ```
-- [ ] **Step 4: Run, verify pass** — PASS (4).
+- [ ] **Step 4: Run, verify pass** — PASS (10, incl. the 5 previously-untested violation branches + naked-URL + missing-key — each bites a `return []` stub).
 - [ ] **Step 5: Commit** — `git add scripts/lib/link_budget.py tests/test_link_budget.py && git commit -m "feat: per-site link-budget validator (adversarial-tested)"`
 
 ---
@@ -1144,6 +1186,7 @@ No spec requirement is matched to a task name only; each maps to a concrete step
 - originality `test_real_inputs_html_article`: pre-v2.1 `_has_framework` returns False on HTML `<ol>` → `assert checks["original_framework"] is True` fails. ✅ bites the original plan code (the N2 defect the quality gate caught).
 - originality `test_course_name_alone_does_not_pass`: pre-v2.1 stat matches a non-numeric course name + analogy fires on "like you" → `passes` True → `assert passes is False` fails. ✅
 - link_budget `test_too_many_primary_occurrences`: stub `return []` → `any("primary_course_occurrences"...)` fails. ✅
+- link_budget N3 branch tests (`test_internal_sibling_max`, `test_primary_course_distinct`, `test_secondary_course_max`, `test_authoritative_max_and_naked_url_anchor`, `test_banned_generic_anchor`, `test_missing_inventory_key_is_named_violation`): each asserts a specific violation string → a `return []` (or KeyError-prone) stub fails every one. ✅ closes the 5/10 untested-branch blind spot on a hard gate.
 - jsonld `test_suppress_skips_node`: stub ignoring `suppress` still emits FAQPage → `assert "FAQPage" not in types` fails (M8 fixed — was weak). ✅
 - probe `test_meta_writable_false_on_mismatch` + `test_uid_roundtrip_false_when_find_misses`: hardcoded-True stubs fail (readback/​find mismatch). ✅
 - wp_publish `test_rerun_same_uid_updates_not_duplicates`: always-create stub → `cr.call_count==0` fails. ✅ And this is now *semantically* real (not just mock-true) because Task 9 registers the meta + find route and Task 10 proves the round-trip live before Task 11 is used.
