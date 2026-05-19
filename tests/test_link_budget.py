@@ -26,3 +26,38 @@ def test_dup_anchor_and_spam():
     v=validate_links(inv,B)
     assert any("identical_anchor" in x for x in v)
     assert any("same_paragraph" in x for x in v)
+def test_internal_sibling_max():           # ADVERSARIAL: previously-untested branch
+    inv={"internal_sibling":["/a","/b","/c","/d"],"primary_course":["u"],
+         "secondary_course":[],"authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b","c","d"],"same_paragraph_domains":[]}
+    assert any("internal_sibling_max" in x for x in validate_links(inv,B))
+def test_primary_course_distinct():        # ADVERSARIAL: previously-untested branch
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u1","u2"],
+         "secondary_course":[],"authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b"],"same_paragraph_domains":[]}
+    assert any("primary_course_distinct" in x for x in validate_links(inv,B))
+def test_secondary_course_max():           # ADVERSARIAL: previously-untested branch
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],
+         "secondary_course":["s1","s2","s3","s4"],
+         "authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b"],"same_paragraph_domains":[]}
+    assert any("secondary_course_max" in x for x in validate_links(inv,B))
+def test_authoritative_max_and_naked_url_anchor():  # ADVERSARIAL: untested branch + source rule
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],"secondary_course":[],
+         "authoritative_outbound":["https://a.gov","https://b.org","https://c.edu"],
+         "anchors":["https://naked-url.example/page","a normal anchor"],
+         "same_paragraph_domains":[]}
+    v=validate_links(inv,B)
+    assert any("authoritative_outbound_max" in x for x in v)
+    assert any("naked URL" in x for x in v)
+def test_banned_generic_anchor():          # ADVERSARIAL: previously-untested branch
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],"secondary_course":[],
+         "authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["Click Here","read more"],"same_paragraph_domains":[]}
+    assert any("banned_anchor: generic" in x for x in validate_links(inv,B))
+def test_missing_inventory_key_is_named_violation():  # gate fed by LLM-built dict
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],
+         "secondary_course":[],"authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b"]}  # missing same_paragraph_domains
+    v=validate_links(inv,B)
+    assert v and any("inventory_incomplete" in x for x in v)

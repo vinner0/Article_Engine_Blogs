@@ -1,4 +1,9 @@
+_REQ=("internal_sibling","primary_course","secondary_course",
+      "authoritative_outbound","anchors","same_paragraph_domains")
 def validate_links(inv, budget):
+    missing=[k for k in _REQ if k not in inv]
+    if missing:                       # ae-6 builds inv in prose — fail diagnostic, not KeyError
+        return [f"inventory_incomplete: missing keys {missing}"]
     v=[]
     sib=inv["internal_sibling"]
     if len(sib)<budget["internal_sibling_min"]:
@@ -22,6 +27,8 @@ def validate_links(inv, budget):
         v.append("identical_anchor: two or more anchors identical")
     if any(a in {"click here","learn more","read more","here"} for a in anchors):
         v.append("banned_anchor: generic anchor present")
+    if any(a.startswith(("http://","https://","www.")) for a in anchors):
+        v.append("banned_anchor: naked URL used as anchor")  # link-budget.md L13
     if inv["same_paragraph_domains"]:
         v.append(f"same_paragraph: domain repeated in one paragraph ({inv['same_paragraph_domains']})")
     return v
