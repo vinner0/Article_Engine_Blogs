@@ -1,0 +1,14 @@
+site: trainingint
+courses:
+  - id: writing-professional-emails
+    course_url: https://www.trainingint.com/writing-professional-emails
+    pillar: communication
+    secondary_courses:
+      - https://www.trainingint.com/communicate-with-confidence
+      - https://www.trainingint.com/business-presentation-skills-training-singapore
+    cluster:
+      - { slug: how-to-write-a-professional-email, primary_keyword: how to write a professional email, status: idea }
+      - { slug: how-to-write-a-follow-up-email, primary_keyword: how to write a follow up email, status: idea }
+      - { slug: how-to-write-a-formal-email-to-your-boss, primary_keyword: how to write a formal email to your boss, status: idea }
+      - { slug: how-to-write-an-apology-email-at-work, primary_keyword: how to write an apology email, status: idea }
+      - { slug: how-to-write-a-meeting-recap-email, primary_keyword: how to write a meeting recap email, status: idea }
