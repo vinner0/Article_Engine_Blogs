@@ -54,7 +54,8 @@ def run(site="trainingint"):
     print("PROBE:",yaml.safe_dump(p,sort_keys=False))
     print("\nMANUAL items to fill in config/sites.yaml before first batch:")
     print(" html_renders_ok, wpcron_reliable, default_category_id,")
-    print(" default_author_id, keyword_data (ubersuggest_csv|ai_only)")
+    print(" default_author_id, keyword_data (ubersuggest_csv|ai_only),")
+    print(" seo_plugin_emits_graph (true if the SEO plugin emits its own JSON-LD @graph)")
 
 if __name__=="__main__":
     run(sys.argv[1] if len(sys.argv)>1 else "trainingint")

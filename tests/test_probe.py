@@ -1,6 +1,6 @@
 import responses
 from scripts.lib.wp_client import WPClient
-from scripts.probe import probe_meta_writable, probe_uid_roundtrip
+from scripts.probe import probe_meta_writable, probe_uid_roundtrip, detect_seo_plugin
 WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
 def wp(): return WPClient(WP,"u","p")
 @responses.activate
@@ -23,3 +23,27 @@ def test_uid_roundtrip_false_when_find_misses():  # ADVERSARIAL: idempotency mus
     responses.get(f"{AE}/find", status=404)        # helper can't find what we just wrote
     responses.delete(f"{WP}/posts/9", json={}, status=200)
     assert probe_uid_roundtrip(wp()) is False
+@responses.activate
+def test_uid_roundtrip_true_when_find_matches():  # the actual publish-gate true path
+    responses.post(f"{WP}/posts", json={"id":9}, status=201)
+    responses.get(f"{AE}/find", json={"id":9}, status=200)
+    responses.delete(f"{WP}/posts/9", json={}, status=200)
+    assert probe_uid_roundtrip(wp()) is True
+@responses.activate
+def test_uid_roundtrip_false_on_wrong_id():  # ADVERSARIAL: must be ==pid, not just non-None
+    responses.post(f"{WP}/posts", json={"id":9}, status=201)
+    responses.get(f"{AE}/find", json={"id":42}, status=200)
+    responses.delete(f"{WP}/posts/9", json={}, status=200)
+    assert probe_uid_roundtrip(wp()) is False
+@responses.activate
+def test_detect_seo_plugin_rankmath():
+    responses.get(f"{WP}/posts", json=[{"id":1,"meta":{"rank_math_title":""}}], status=200)
+    assert detect_seo_plugin(wp())=="rankmath"
+@responses.activate
+def test_detect_seo_plugin_yoast():
+    responses.get(f"{WP}/posts", json=[{"id":1,"meta":{"_yoast_wpseo_title":""}}], status=200)
+    assert detect_seo_plugin(wp())=="yoast"
+@responses.activate
+def test_detect_seo_plugin_none_empty_blog():
+    responses.get(f"{WP}/posts", json=[], status=200)
+    assert detect_seo_plugin(wp())=="none"
