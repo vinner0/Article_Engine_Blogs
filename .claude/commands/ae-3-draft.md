@@ -3,7 +3,7 @@ description: Stage 3 — two-step draft. Skeleton (H1/H2 outline) for review, th
 argument-hint: <slug>
 ---
 
-# /blog-3-draft
+# /ae-3-draft
 
 You are running **Stage 3** of the Article Engine pipeline (trainingint.com) for slug: `$ARGUMENTS`.
 
@@ -26,7 +26,7 @@ If the user requests skeleton edits, update `01-skeleton.md` and re-confirm befo
 - **TL;DR / answer-first paragraph** placeholder (snippet bait — 40–60 words, directly answers the primary query)
 - **4–8 H2 sections** with one-line description of what each covers + which cluster keywords it targets
 - **FAQ block placeholder** with 4–8 Q&A slots (questions drawn from PAA in `intent.md` + cluster long-tails)
-- **CourseCTA placement** — which course is the primary lead capture? (read `courses/trainingint.yaml` for the assigned `flagship_courses.trainingint` and `trainingint` URLs)
+- **CourseCTA placement** — which course is the primary lead capture? (read `courses/trainingint.yaml`: use the cluster `course_url` as the primary CourseCTA and `secondary_courses` for supporting links)
 - **AuthorBio + RelatedPosts** at the end (these are auto-injected by `BlogLayout`, but mark the slot)
 - **Image slots**: hero + 0–4 inline. For each, write a one-sentence Pexels search query (specific, e.g. "Singapore office colleagues conference room laptop").
 
@@ -38,7 +38,7 @@ If the user requests skeleton edits, update `01-skeleton.md` and re-confirm befo
 - All CourseCTA + AuthorBio slots present as MDX component imports (or markdown placeholders mapped to those components)
 - Hero + inline images downloaded via `npm run fetch:pexels` and saved under `content/trainingint/$ARGUMENTS/images/`. Use the queries from the skeleton.
 - Frontmatter at top of file matching the content collection schema in `src/content/config.ts` (title, description, primaryKeyword, keywordCluster, pillar, cluster, publishedAt, heroImage, heroAlt, readingTime, courseLinks, faqs)
-- **Voice is NOT yet applied** — write clean, competent, generic prose. Stage 4 (`/blog-4-voice-pass`) injects Vinai's voice. If you write voice now, you'll fight Stage 4.
+- **Voice is NOT yet applied** — write clean, competent, generic prose. Stage 4 (`/ae-4-voice-pass`) injects Vinai's voice. If you write voice now, you'll fight Stage 4.
 
 ## Process
 1. Read `cluster.md` and `serp.md`; read `courses/trainingint.yaml` for the course-link assignment; read `voice/voice.md` and `voice/do-not-write.md` for **what to avoid** (no AI tells, no banned phrases — but no positive voice injection)

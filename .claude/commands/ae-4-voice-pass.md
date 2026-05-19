@@ -3,7 +3,7 @@ description: Stage 4 — rewrite the draft in Vinai's voice (analogies, stories,
 argument-hint: <slug>
 ---
 
-# /blog-4-voice-pass
+# /ae-4-voice-pass
 
 You are running **Stage 4** of the Article Engine pipeline (trainingint.com) for slug: `$ARGUMENTS`.
 
@@ -74,4 +74,4 @@ Scrub all of these from the draft:
 - Stage 3 hasn't completed (`02-draft.md` missing)
 - `voice/stats.md` or `voice/do-not-write.md` is empty (escalate to Vinai — the voice corpus needs to exist before voice pass works)
 
-After writing, summarize: which mandatory injections happened, which were skipped (and why), how many banned phrases were scrubbed, total length delta vs draft. **Tell the user clearly: "This is now ready for Stage 5 — your human edit gate. Read 03-voice.md, edit in place, then run /blog-6-seo-pass when satisfied."**
+After writing, summarize: which mandatory injections happened, which were skipped (and why), how many banned phrases were scrubbed, total length delta vs draft. **Tell the user clearly: "This is now ready for Stage 5 — your human edit gate. Read 03-voice.md, edit in place, then run /ae-6-seo-pass when satisfied."**

@@ -3,7 +3,7 @@ description: Stage 2 — fetch top-3 ranking pages and extract the structural ta
 argument-hint: <slug>
 ---
 
-# /blog-2-serp-analyze
+# /ae-2-serp-analyze
 
 You are running **Stage 2** of the Article Engine pipeline (trainingint.com) for slug: `$ARGUMENTS`.
 

@@ -3,7 +3,7 @@ description: Stage 1 — keyword cluster + SERP intent for a blog post. Validate
 argument-hint: <slug>
 ---
 
-# /blog-1-keyword-research
+# /ae-1-keyword-research
 
 You are running **Stage 1** of the Article Engine pipeline (trainingint.com) for slug: `$ARGUMENTS`.
 
