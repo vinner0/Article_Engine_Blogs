@@ -2,60 +2,59 @@
 
 **Date:** 2026-05-19
 **Owner:** Vinai Prakash
-**Status:** Draft for review (pending independent audit)
+**Status:** Revised post-audit (v2). Independent adversarial audit run 2026-05-19; verdict was REWORK; this version incorporates every BLOCKER/MAJOR finding. Pending owner review.
 **Project root:** `D:/VP/ARTICLE_ENGINE/`
 **PKM project:** `article-engine`
 
-A registry-driven external engine that turns a per-site course-topic queue into SEO-researched, voice-matched, deeply-linked WordPress articles, pushed daily as **drafts the owner 1-click publishes**. Built for trainingint.com first; architected so every other WordPress property is a config entry, not a rebuild.
+A registry-driven external engine that turns a per-site course-topic queue into SEO-researched, voice-matched, deeply-linked WordPress articles, pushed daily as **drafts the owner reviews and publishes**. Built for trainingint.com first; architected so every other WordPress property is a config entry, not a rebuild.
+
+> **Honesty note (post-audit).** An earlier draft framed this as "a fusion of two proven systems, ~70% reused." A filesystem audit proved that false: the primary cited source (`D:/VP/BLOG_AUDIT/`) contains **zero code** — it is an approved-but-unbuilt spec. This project is **~70% net-new Python**. What is genuinely reusable is *prompt/stage design* and *reference content data* (voice rules, SEO checklist, link-budget, schema templates, course topology), not executable libraries. Section 3 states the verified reality; all effort/phase/cost reasoning derives from that, not from a reuse fantasy.
 
 ---
 
 ## 1. Goal
 
-Build a content engine that, for any registered WordPress site:
+For any registered WordPress site:
 
-1. Takes the **courses we sell** as the topic source.
-2. Expands each course into a **cluster of ~5 articles**, each built from real keyword + SERP research.
-3. Generates full articles — research, prose, images, internal/external links, SEO meta, schema — that **read like Vinai, not AI slop**.
-4. Makes each article **promote 1 primary course** (CTA + contextual links), link **2–3 secondary courses** and **2–3 sibling blog posts**, building a topical-authority mesh around each course URL.
-5. **Pushes one new article per day into WordPress as a draft/scheduled post**; the owner reviews and publishes with one click.
-6. Scales to several WordPress sites with **no code change** — only config + a topic file + a WP credential.
+1. Take the **courses we sell** as the topic source.
+2. Expand each course into a **cluster of ~5 articles**, each from real keyword + SERP research.
+3. Generate full articles — research, prose, images, links, SEO meta, schema — that **read like Vinai, not AI slop**.
+4. Each article **promotes 1 primary course** + links **2–3 secondary courses** + **2–3 sibling blog posts**, building a topical-authority mesh around each course URL.
+5. **Push one new article/day into WordPress as a draft**; owner reviews, lightly edits, publishes.
+6. Scale to several WordPress sites with **no code change** — config + topic file + WP credential only.
 
-This is not greenfield. It fuses two proven PKM systems (Section 3).
+## 2. Locked decisions
 
-## 2. Locked decisions (from 2026-05-19 brainstorm)
+| # | Decision | Choice | Post-audit note |
+|---|---|---|---|
+| D1 | Run model | External Python engine + WP REST push | **Conditional** — see D1′ |
+| D1′ | REST-write contingency | If P0 proves SEO-plugin meta is **not** writable via external REST + app password, a **mandatory thin helper plugin** per site is added. D1's "no plugin" is not guaranteed; it is decided by the P0 probe. | New (audit F2) |
+| D2 | Publish autonomy | Auto-generate → WP **draft**; human reviews **and edits** before publish | Strengthened: the human gate is a *genuine edit pass*, not a 1-click rubber stamp — this is the real scaled-content-abuse defence (audit F4) |
+| D3 | Content model | Cluster per course (~5) + full keyword/SERP research | unchanged |
+| D4 | v1 scope | trainingint.com first; multi-site-ready architecture | unchanged |
+| D5 | Build strategy | New standalone project; reuse is **design + content data**, not code | Reframed (audit F1) |
 
-| # | Decision | Choice |
-|---|---|---|
-| D1 | Run model | **External Python engine + WP REST push** (not a per-site PHP plugin) |
-| D2 | Publish autonomy | **Auto-generate → WP draft; human 1-click publish** (protects against scaled-content-abuse penalty) |
-| D3 | Content model | **Cluster per course (~5 articles) + full keyword/SERP research** |
-| D4 | v1 scope | **trainingint.com first; multi-site-ready architecture** |
-| D5 | Build strategy | **New standalone project reusing blog-audit + softskills as shared libraries** (Approach A — clean seams; net-new generation kept separate from blog-audit's "refresh existing" lifecycle) |
+## 3. Reuse reality (filesystem-verified 2026-05-19)
 
-## 3. Prior art in PKM (reuse map)
+Every row below was checked against the actual filesystem by an independent auditor. "Reuse" means one of: **CODE** (importable/forkable), **DESIGN** (a prompt/spec to re-implement), **DATA** (reference content used as-is).
 
-Most hard problems are already solved and battle-tested. The engine is a **fusion**, not an invention.
-
-| Layer | Source project | Path | Reuse | Adaptation needed |
+| Asset spec needs | Claimed source | Verified state | Reuse class | Consequence |
 |---|---|---|---|---|
-| Multi-site registry + WP push | **blog-audit** | `D:/VP/BLOG_AUDIT/` | `config/sites.yaml` schema, `lib/wp_client.py`, `lib/pexels.py`, `lib/link_health.py`, `lib/voice_check.py`, `lib/sales_block.py` | `wp_client` currently writes **draft revisions of existing posts**; must add **create-new-post**, set category/tags, upload featured media, write SEO-plugin meta + JSON-LD |
-| 8-stage generation brain | **softskills-sg** | `D:/vp/softskills/1-NEW-SSKILLS/` | The `/blog-*` stage logic: keyword-research → serp-analyze → draft → voice-pass → seo-pass → publish; per-post `_research/_draft/_audit/` artifact discipline; idempotent stages | Output target changes from **MDX** to **WordPress HTML**; publish target changes from git/Coolify to WP REST |
-| Voice + originality | softskills-sg | `…/voice/` (`voice.md`, `humor.md`, `opinions.md`, `stats.md`, `stories.md`, `do-not-write.md`, `corpus/`) | Near-verbatim. `stats.md` facts are locked & already trainingint-centric (27 WSQ courses, 48,000+ trained, etc.) | Shared corpus; per-site overrides optional later |
-| SEO discipline | softskills-sg | `…/seo/checklist.md`, `seo/link-budget.md`, `seo/schema-templates.md`, `seo/pillar-map.yaml` | 80+ on-page checklist, anti-spam link budget, Article/FAQPage/BreadcrumbList JSON-LD, course→cluster topology | `pillar-map.yaml` → per-site `courses/<site>.yaml` |
-| Daily digest email | **is-auto-seo** | `D:/VP/auto-seo/plugin/includes/` (reporter) | HTML email pattern + WP-admin deep links | Reframed: "1 draft ready → Review & Publish" |
-| AI provider pattern | is-auto-seo v1/v2 | same | Claude/OpenAI factory; 1s rate-limit discipline | Reused for the generation calls |
+| Multi-site WP push client (`wp_client`) | blog-audit `scripts/lib/wp_client.py` | **Does not exist.** `D:/VP/BLOG_AUDIT/` = README + 1 spec, 0 `.py`. Its README: "no implementation yet" | none → **net-new** | Highest-risk, least-proven layer has no code under it. Treated as net-new + unverified (Section 9, 11). |
+| `pexels`, `link_health`, `voice_check`, `sales_block` libs | blog-audit `scripts/lib/` | **Do not exist** as Python. Real Pexels = `softskills/scripts/pexels-fetch.mjs` (Node). Real link-health = `softskills/src/lib/link-health.ts` (TS) | DESIGN only | Port Node/TS logic → Python, or shell out to Node/tsx. Net-new Python either way. |
+| `config/sites.yaml` registry | blog-audit `config/sites.yaml` | **No file.** Schema defined only in blog-audit spec prose (lines 63–89); credentials never generated | DESIGN | Schema is a sound copyable design; not a populated artifact. WP app passwords must be created. |
+| 8-stage generation pipeline | softskills `.claude/commands/blog-*.md` | **Exist, substantive — but are Claude slash-command prompts**, human-driven, publishing to Astro MDX/git/Coolify | DESIGN | Reusable as *prompt design*. Rebuilding them as an unattended autonomous Python orchestrator targeting WP REST is most of this build. |
+| Voice rule files (`voice.md`, `humor.md`, `opinions.md`, `stats.md`, `stories.md`, `do-not-write.md`) | softskills `voice/` | **Exist, real, substantive.** `stats.md` facts locked, already trainingint-centric | **DATA — true reuse** | Used as-is (vendored copy, Section 10). |
+| Voice example `corpus/` | softskills `voice/corpus/` | **Empty** — all 4 subdirs `.gitkeep` only | none | No worked-example corpus exists. Voice matching relies on the rule files only; any "match against corpus" idea is unsupported and dropped. |
+| SEO checklist / link-budget / schema-templates / pillar-map | softskills `seo/` | **Exist, real, substantive** (checklist = 80 items; pillar-map = real trainingint topology). schema-templates.md says canonical impl is `src/lib/schema/*.ts` | **DATA — true reuse** (rules); schema *generator* is net-new Python | Rules/topology reused directly; JSON-LD builder re-implemented. |
+| Daily digest email + AI-provider factory + rate-limit | is-auto-seo `plugin/includes/*.php` | **Exist — PHP plugin classes**, server-side meta via `wp_update_post`/`get_post_meta` | DESIGN | Re-implement as Python. **Critically: proves nothing about external-REST meta writes** (audit F2). |
+| "softskills MDX already links to trainingint course URLs" | `…/how-to-communicate-effectively-with-clients/index.mdx` | **True** | DATA point | De-risks **content strategy only** — not WP integration (audit F8). |
 
-**Key fact discovered during research:** softskills.sg blog articles **already point `courseLinks.primary` at trainingint.com course URLs** (verified in `…/src/content/blog/how-to-communicate-effectively-with-clients/index.mdx` frontmatter). The course→article→course relationship this engine automates is the exact pattern softskills already runs manually.
+**Build baseline:** ~70% net-new Python. Genuine reuse = voice rule files, SEO checklist, link-budget, schema templates, course topology (all DATA), plus stage/prompt designs (DESIGN). No forkable code exists. All downstream phases (Section 14) and cost (Section 13) are derived from this baseline.
 
-## 4. Non-goals (deferred)
+## 4. Non-goals
 
-- Refreshing/auditing **existing** posts — that is blog-audit's job; this engine only generates net-new.
-- Off-page SEO / backlinks.
-- Comments, newsletter, multilingual.
-- Auto-publishing **live** with no human review (explicitly rejected, D2).
-- A WordPress plugin (explicitly rejected, D1) — except an optional thin read-only helper if REST gaps appear (Section 9.5).
-- Elementor-built article bodies — posts ship as portable HTML (Section 9.4).
+Refreshing existing posts (blog-audit's intended job) · off-page SEO/backlinks · comments/newsletter/multilingual · auto-publishing live with no human edit (D2) · Elementor-built article bodies.
 
 ## 5. Architecture
 
@@ -63,198 +62,180 @@ Most hard problems are already solved and battle-tested. The engine is a **fusio
 
 ```
 D:/VP/ARTICLE_ENGINE/
-├── README.md                       # PKM-format, path: field
-├── config/
-│   └── sites.yaml                  # registry (extends blog-audit's schema)
-├── courses/
-│   └── trainingint.yaml            # course → cluster → article topic spine (per site)
-├── credentials/
-│   └── .env                        # WP application passwords (gitignored)
-├── voice/                          # symlink or synced copy of softskills voice corpus
-├── seo/
-│   ├── checklist.md                # 80+ on-page items (from softskills)
-│   ├── link-budget.md              # anti-spam rules (from softskills)
-│   └── schema-templates.md         # JSON-LD (from softskills)
-├── imports/<site>/<YYYY-MM-DD>/
-│   └── ubersuggest-*.csv           # manual keyword-data drops
+├── config/sites.yaml               # registry (schema adapted from blog-audit spec text)
+├── courses/trainingint.yaml        # course → cluster → article topic spine (per site)
+├── credentials/.env                # WP application passwords (gitignored)
+├── voice/                          # VENDORED copy of softskills voice rule files + sync.md
+├── seo/                            # checklist.md, link-budget.md, schema-templates.md (DATA reuse)
+├── imports/<site>/<YYYY-MM-DD>/    # manual Ubersuggest CSV drops
 ├── content/<site>/<slug>/
-│   ├── _research/  cluster.md, intent.md, serp.md
+│   ├── _research/  cluster.md, intent.md, serp.md, serp-bodies/   # full top-3 text (audit F4)
 │   ├── _draft/     01-skeleton.md, 02-draft.md, 03-voice.md, 04-seo.html
-│   ├── _audit/     seo-checklist.md, originality.md
-│   ├── images/     pexels-fetched, optimised
-│   └── final.html  # frozen at push time
-├── queue/<site>.csv                # per-slug status + scheduled date (sole progress store)
+│   ├── _audit/     seo-checklist.md, originality.md, cost.json
+│   ├── images/
+│   └── final.html
+├── state/<site>.sqlite             # queue + state machine + backlink jobs (audit F3/F6)
 ├── scripts/
-│   ├── plan.py                     # course.yaml → expand clusters → fill queue
-│   ├── run.py                      # daily orchestrator: next slug → stages → email
-│   └── lib/
-│       ├── wp_client.py            # forked+extended from blog-audit
-│       ├── pillar.py               # cluster expansion + primary-keyword dedupe
-│       ├── keyword.py              # Ubersuggest CSV → cluster/intent (AI fallback)
-│       ├── serp.py                 # top-3 structural analysis
-│       ├── draft.py                # skeleton→draft, Pexels images
-│       ├── voice.py                # voice pass + voice-damage n-gram check
-│       ├── seo.py                  # checklist, link budget, schema, originality
-│       ├── linker.py               # resolve internal links to live URLs + back-link queue
-│       ├── pexels.py               # from blog-audit
-│       ├── link_health.py          # from blog-audit
-│       └── digest.py               # daily email (is-auto-seo pattern)
-└── docs/superpowers/specs/         # this spec
+│   ├── probe.py                    # P0 preflight (design-gating)
+│   ├── plan.py                     # courses.yaml → expand → state
+│   ├── run.py                      # daily orchestrator (1 slug, idempotent)
+│   └── lib/  wp_client.py · pillar.py · keyword.py · serp.py · draft.py ·
+│             voice.py · seo.py · linker.py · pexels.py · link_health.py ·
+│             ai_provider.py · digest.py · costguard.py · state.py
+└── docs/superpowers/specs/
 ```
 
-3 entry points (`plan.py`, `run.py`, plus `wp_client` smoke test), ~11 lib modules — most ported, not new.
+All `lib/` modules are **net-new** (Section 3). Names mirror the blog-audit *design* for familiarity only.
 
-### 5.2 Data flow
+### 5.2 State store (replaces "CSV is sole progress store" — audit F3/F6)
+
+`state/<site>.sqlite` (SQLite — the blog-audit "no SQLite" rule was *its* decision for a human one-shot loop; an unattended daily autonomous loop is a different risk class). Tables:
+
+- `articles(slug PK, status, primary_keyword, course_id, scheduled_date, wp_post_id, content_uid, cost_tokens, cost_usd, updated_at)` — explicit state machine: `idea → planned → researched → drafted → voiced → seo_passed → pushed → published`. `wp_post_id` + `content_uid` written **before** the status flip to `pushed`.
+- `backlink_jobs(id PK, from_slug, to_slug, status, attempts, expires_at)` — bounded, expiring (audit F5).
+- `runs(id, started_at, finished_at, slug, outcome, tokens, usd)` — observability + cost ledger.
+
+Single-writer guarantee via a per-site lock file; SQLite transactions make stage commits atomic. A run that dies mid-stage leaves a consistent prior state; rerun is safe because every external effect is keyed on `content_uid` (Section 9.2).
+
+### 5.3 Data flow
 
 ```
-courses/<site>.yaml ──plan.py──> queue/<site>.csv (status=idea)
-                                        │
-run.py (daily, one slug, status=idea→…→pushed):
-  keyword ─> serp ─> draft ─> voice ─> seo ─> push ─> digest email
-                                                 │
-                                    WP REST: media upload + create post
-                                    status=draft (or future+date)
-                                                 │
-                                    queue row → pushed; back-link jobs queued
-                                                 │
-                              Owner opens wp-admin link in email → Publish
+courses/<site>.yaml ─plan.py─> state(status=idea/planned)
+run.py (daily, one slug, advances state machine, cost-guarded):
+  keyword → serp(+full top-3 bodies) → draft → voice → seo(gates) → push → digest
+                                                              │
+                            WP REST: search-by-uid → create-or-skip draft
+                            wp_post_id+uid recorded BEFORE status=pushed
+                                                              │
+                            owner: email → wp-admin → EDIT → Publish
 ```
-
-Every stage writes its artifact before declaring success; reruns are safe (softskills atomicity principle).
 
 ## 6. Course → cluster topic spine
 
-`courses/trainingint.yaml` is the source of truth. One block per course; `plan.py` expands each into ~5 keyword-diverse article slugs and dedupes primary keywords across the whole site (no two articles target the same primary keyword — the cannibalisation guard softskills enforces).
+`courses/trainingint.yaml` = source of truth, one block per course. `plan.py` expands each into ~5 keyword-diverse slugs and **dedupes primary keywords site-wide** (cannibalisation guard).
 
-```yaml
-site: trainingint
-courses:
-  - id: writing-professional-emails
-    course_url: https://www.trainingint.com/writing-professional-emails
-    pillar: communication
-    cluster:
-      - slug: how-to-write-a-professional-email
-        primary_keyword: how to write a professional email
-      - slug: how-to-write-a-follow-up-email
-        primary_keyword: how to write a follow up email
-      # … ~5 total; secondary courses inferred from same pillar
-    secondary_courses:                       # the 2–3 cross-links
-      - https://www.trainingint.com/communicate-with-confidence
-      - https://www.trainingint.com/business-presentation-skills-training-singapore
-```
-
-`plan.py` may **propose** additional cluster slugs (AI keyword expansion) for owner approval rather than inventing them silently — keeps a human in topic selection.
+**Audit F9 fix:** owner-authored slugs are authoritative. AI-proposed expansion slugs are written `status=proposed` and are **excluded from the cannibalisation guarantee and never auto-run** until a human + real keyword data promote them. The dedupe guarantee holds only over human-confirmed, real-keyword-backed slugs.
 
 ## 7. Pipeline stages
 
-| # | Stage | Input | Output | Does |
-|---|---|---|---|---|
-| 0 | `plan` | `courses/<site>.yaml` | `queue/<site>.csv` | Expand each course → ~5 slugs, dedupe primary keywords, set status=idea, assign cadence dates |
-| 1 | `keyword` | primary kw + `imports/<site>/…/ubersuggest-*.csv` | `_research/cluster.md`, `intent.md` | Build 5–15-term cluster (KD/volume filtered); classify intent; flag if blog is wrong format. **AI-only fallback** if no CSV, written with a `low-confidence-keywords` flag in the artifact |
-| 2 | `serp` | primary kw | `_research/serp.md` | Top-3 ranking pages (exclude Reddit/Quora/YT): avg word count, H2 set, format, **coverage gaps** = the structural target |
-| 3 | `draft` | cluster+serp+voice | `_draft/01-skeleton.md` → `02-draft.md` + `images/` | Skeleton (H1/H2/FAQ/CTA/image slots), then full draft; Pexels hero + inline images |
-| 4 | `voice` | `02-draft.md` + `voice/*` | `_draft/03-voice.md` | Apply Vinai voice/humour/opinions/stats/stories; log which rules fired |
-| 5 | `seo` | `03-voice.md` + checklist + link-budget | `_draft/04-seo.html` + `_audit/seo-checklist.md`, `originality.md` | 80+ checklist; insert links per budget (Section 8); meta title/desc; JSON-LD; **originality gate** (≥2 of story/analogy/stat/framework); **n-gram anti-plagiarism** vs top-3; **voice-damage check** refuses to overwrite if prose drifted from stage 4 |
-| 6 | `push` | `04-seo.html` | live WP draft + `final.html` | WP REST: upload featured+inline media; create post `status=draft` (or `future`+date); set category/tags; write Yoast **or** RankMath meta + JSON-LD; resolve internal links to **live** URLs; queue back-link jobs; queue row → pushed |
-| 7 | `digest` | day's pushed slugs | HTML email | "N draft(s) ready" + per-post wp-admin **Edit** deep link + title/meta preview |
+| # | Stage | Output | Does |
+|---|---|---|---|
+| 0 | `probe` | `sites.yaml` probe block | **Design-gating preflight, Section 11.** Build does not start on a site until it passes. |
+| 1 | `plan` | `state` rows | Expand courses → ~5 slugs, dedupe primary keywords, schedule dates, quarantine AI-proposed slugs |
+| 2 | `keyword` | `_research/cluster.md`, `intent.md` | 5–15-term cluster from Ubersuggest CSV; AI-only fallback **explicitly flagged `low-confidence`** and excluded from the cannibalisation guarantee |
+| 3 | `serp` | `_research/serp.md` **+ `serp-bodies/{1,2,3}.txt`** | Structural target (word count, H2s, gaps) **and the full extracted body text of top-3** — required input for the F4 n-gram gate |
+| 4 | `draft` | `01-skeleton.md` → `02-draft.md` + images | Skeleton then full draft; Pexels hero + inline images |
+| 5 | `voice` | `03-voice.md` | Apply Vinai voice rule files; log rules fired; record n-gram baseline of this prose |
+| 6 | `seo` | `04-seo.html` + `_audit/*` | 80+ checklist; insert links per budget (Section 8); meta; JSON-LD; **gates defined in Section 7.1** |
+| 7 | `push` | live WP draft + `final.html` | Section 9.2 idempotent create; record `wp_post_id`+`uid` pre-flip; queue backlink jobs |
+| 8 | `digest` | HTML email | Per-post wp-admin **Edit** deep link + meta preview + token/$ cost line |
 
-Hard refuse-to-push conditions (ported from softskills, all enforced before stage 6 writes anything): >3 primary-course links · 0 internal sibling links · 0 authoritative outbound · cadence cap exceeded · originality gate failed · n-gram overlap with a top-3 result · schema invalid.
+### 7.1 Gates — concrete algorithms (audit F4)
 
-## 8. Deep-linking mesh (core requirement)
+The "hard refuse-to-push" list is only real if each gate is a runnable definition with its inputs collected upstream:
 
-Per-article link budget (from softskills `seo/link-budget.md`, anti-spam-disciplined):
+- **Originality gate** — refuse unless ≥2 of: (a) a string match against a line in `voice/stories.md`; (b) ≥1 analogy sentence not 8-gram-overlapping any `serp-bodies/*`; (c) ≥1 verbatim figure from `voice/stats.md`; (d) a numbered framework/checklist with no 8-gram overlap to `serp-bodies/*`. Mechanically decidable from collected data.
+- **Anti-plagiarism n-gram** — any 8-word shingle shared with `serp-bodies/{1,2,3}.txt` → flagged span must be rewritten before push. (Now runnable because stage 3 persists the bodies.)
+- **Voice-damage** — 8-word-shingle similarity of `04-seo.html` prose vs `03-voice.md` ≥ 85%, else refuse to overwrite (SEO pass must not rewrite voice).
+- **Link budget** — Section 8; schema-invalid or budget-breach → refuse.
+- **Cadence** — > configured per-week cap → refuse.
+- **Human-edit reality (D2)** — the digest email states plainly that publishing without editing forfeits the scaled-content-abuse defence; the gate's protection is the *edit*, not the click. The engine cannot enforce this, so the spec names it as an operating discipline, not an automated guarantee.
 
-| Target | Count | Placement |
-|---|---|---|
-| **Primary course** | 1 URL | CTA above fold + CTA bottom + 1 contextual body link (same URL ≤3×, never same paragraph) |
-| **Secondary courses** | 2–3 | Contextual body links, descriptive anchors |
-| **Sibling blog posts** (same cluster/pillar) | 2–3 | Contextual; **resolved at push time against posts that are actually live** on the site |
-| **Authoritative external** | 1–2 | SSG/MOM/HBR/peer-reviewed; `target=_blank rel=noopener`, no `rel=sponsored` |
+## 8. Deep-linking mesh (audit F5 rework)
 
-Anti-spam discipline (verbatim from softskills): no identical anchors; ≤40% exact-match anchors; no naked URLs / "click here"; one primary CTA above fold + one bottom; refuse-to-publish if budget breached.
+Per-article budget (from softskills `seo/link-budget.md`): 1 primary course (above-fold CTA + bottom CTA + 1 contextual, same URL ≤3×, never same paragraph) · 2–3 secondary courses · 2–3 sibling blog posts · 1–2 authoritative external (`target=_blank rel=noopener`, no `rel=sponsored`). Anti-spam: no identical anchors, ≤40% exact-match anchors, no naked URLs/"click here".
 
-**404-avoidance (lesson from softskills):** softskills shipped sitewide `courseLinks.primary` 404s by linking pages that did not yet exist. The engine's `linker.py` queries the target site's WP REST for live posts/pages and only emits internal links that resolve **200**; unresolved sibling links are deferred to a **back-link queue**.
+**Steady-state problem the audit found:** the engine pushes *drafts*; the owner may publish late or never; so sibling posts rarely resolve 200 and naive "link only live URLs" means the mesh never densifies and the backlink queue grows forever. **Resolution:**
 
-**Back-link mesh tightening:** when a newer cluster sibling goes live, queued jobs add a link to it from earlier published siblings (via WP REST post update, preserving body, exact-match insert only — blog-audit's content-safety pattern). The topical mesh densifies automatically without re-running generation.
+- At push, `linker.py` links siblings that are **published** (200). Unresolved siblings → `backlink_jobs` with `expires_at` (default 60 days) and capped attempts. Expired jobs are dropped and surfaced in the digest, not retried forever.
+- When a sibling is later published, the backlink job does **not** silently edit live content. It generates a **new draft revision** of the earlier post with the link inserted (exact-match, body-preserving) and surfaces it in the digest for the same human approve-and-publish gate. Autonomous modification of live published content is explicitly disallowed (consistent with D2).
+- Idempotency: each engine-inserted link carries a hidden marker (`data-ae-link` / HTML comment) so reruns detect and skip already-inserted links instead of double-inserting.
+- Links are 200-revalidated at the time the backlink revision is built (a previously-live target may have moved).
 
 ## 9. WordPress integration
 
 ### 9.1 Transport
-WP REST API v2 + **application passwords**, per-site base URL + credential env var (blog-audit's `sites.yaml` already defines `wp_api_base` + `app_password_env` for trainingint, intellisoft, vinaiprakash, excelchamp).
+WP REST API v2 + application passwords; per-site `wp_api_base` + `app_password_env`. App passwords must be **created** (none exist yet — Section 3).
 
-### 9.2 Post creation
-`POST /wp/v2/posts` with `status=draft` (D2) or `status=future` + `date` for scheduled drip. Set `categories`, `tags`, `author`, `featured_media` (from a prior `POST /wp/v2/media` upload of the optimised Pexels hero).
+### 9.2 Idempotent post creation (audit F6)
+Before `POST /wp/v2/posts`: generate a deterministic `content_uid` (hash of site+slug); `GET` search posts for an existing post carrying that uid in a registered meta key **or** matching the target slug. If found → update that post (no second post). If not → create, then **immediately** record `wp_post_id`+`content_uid` to `state` *before* any further work or status flip. Orphaned media from a failed prior run (uploaded, post not created) are detected by uid-tagged media titles and cleaned/reused. There is no path where a rerun creates a duplicate post.
 
-### 9.3 SEO-plugin meta
-Yoast and RankMath expose meta differently over REST. The engine **detects the installed plugin per site** (probe REST schema / known meta keys) and writes the matching fields (`_yoast_wpseo_title`/`_yoast_wpseo_metadesc` vs RankMath `rank_math_title`/`rank_math_description`). JSON-LD is injected into post content as a `<script type="application/ld+json">` block so it is plugin-independent. **Unverified — see Section 11.**
+### 9.3 SEO-plugin meta — design-gating, not assumed (audit F2)
+is-auto-seo writes meta *server-side*; that proves nothing about an **external** client writing it over REST with an application password. Yoast/RankMath meta is frequently `show_in_rest:false` or `auth_callback`-protected. Therefore P0 (Section 11) performs an **authenticated write→read round-trip of the actual SEO-plugin meta field on a throwaway draft on the live site.** Outcomes:
 
-### 9.4 Body format
-Posts ship as clean semantic HTML (headings, lists, tables, figure/img, the JSON-LD block) that renders correctly in Gutenberg (as a Custom HTML block or classic content) and the classic editor. **No Elementor** — Elementor is trainingint's page builder; blog posts use the standard editor (assumption, Section 11).
+- **Writable via REST** → engine writes plugin-native meta directly. D1 holds.
+- **Not writable** → **D1′ triggers**: a mandatory thin helper plugin per site exposes a hardened custom endpoint that sets the meta in-process. This is then on the critical path, not "optional."
 
-### 9.5 Optional thin helper plugin
-Only if REST gaps surface (e.g. app passwords blocked, or meta not writable): a minimal read-only/receiver plugin per site. Deferred; not in v1 unless audit/probe forces it.
+JSON-LD is injected as an in-content `<script type="application/ld+json">` block (plugin-independent). **Audit caveat:** Yoast/RankMath emit their own `@graph`; to avoid duplicate/conflicting schema the engine emits **only** the schema types the active plugin does not (FAQPage/Article only if absent) — decided by the P0 probe.
 
-### 9.6 Scheduler
-v1: Windows Task Scheduler on Vinai's machine — one daily `run.py` invocation (pick next queued slug → stages 1–7). Scale path: VPS cron. Idempotent stages mean a missed/failed run is safe to rerun.
+### 9.4 Body format + render proof (audit F10)
+Posts ship as clean semantic HTML (headings/lists/tables/figure + the JSON-LD block) as a Gutenberg Custom-HTML/classic block. That trainingint posts use Gutenberg/classic (not Elementor) is an **inference**; P0 pushes a real test HTML draft and fetches the rendered preview to confirm it renders acceptably **before P3 is greenlit**. If post bodies are Elementor/builder-bound, the design branches (helper plugin or templated block) — resolved at P0, not during build.
 
-## 10. Voice & SEO discipline (ported, proven)
+### 9.5 Scheduler
+v1: Windows Task Scheduler, one daily `run.py`. Scale: VPS cron. **Silent-failure alerting:** every run writes a `runs` row; if no successful run in 24h the next `digest` (or a watchdog) emails a FAILURE notice — an unattended job that quietly dies must not be invisible (audit gap).
 
-- **Voice corpus** reused from softskills `voice/`; `stats.md` facts are locked, never paraphrased, already trainingint-centric.
-- **`do-not-write.md`** AI-tell blocklist enforced in voice + seo stages ("delve", "in today's fast-paced world", em-dash overuse, etc.).
-- **Originality gate**: each article must contain ≥2 of {Vinai story, original analogy not in top-3, locked stat, original framework}. Plus 8-word n-gram overlap check vs top-3 SERP → rewrite flagged phrases.
-- **80+ item SEO checklist** produces a per-post pass/fail `seo-checklist.md`.
-- **Schema**: Article + FAQPage (from FAQ frontmatter, wins PAA) + BreadcrumbList. No Course schema on posts (wrong-schema-on-wrong-page penalty).
+## 10. Voice & SEO discipline (DATA reuse)
 
-## 11. Assumptions to verify before build (NOT confirmed)
+Voice **rule files** vendored into `voice/` with a documented `sync.md` (no symlink — Windows symlink/drift risk on locked `stats.md` facts, audit F11). `do-not-write.md` AI-tell blocklist enforced in stages 5–6. No example `corpus/` exists (Section 3) — voice matching is rule-driven only; the spec makes no claim to corpus-based matching. SEO checklist + link-budget + schema templates used as the canonical rule set; JSON-LD builder is net-new Python validated against `schema-templates.md`.
 
-Per the principle that a design doc states intent, not shipped reality — these must be probed against the live site, not assumed:
+## 11. P0 preflight — design-gating (`probe.py`)
 
-1. **WP REST + application passwords enabled on trainingint.com.** Security plugins / host hardening frequently disable both. Probe: authenticated `GET /wp-json/wp/v2/users/me`.
-2. **Which SEO plugin is installed on trainingint** (Yoast vs RankMath vs none). is-auto-seo's notes say Yoast "may not be installed on production" — so this is genuinely open. Probe REST + active-plugins.
-3. **Blog post editor** — confirmed only that Elementor builds *pages*; that posts use Gutenberg/classic is an inference. Verify on a real published post's REST payload.
-4. **No keyword API** exists in PKM. Default = manual Ubersuggest CSV drop (softskills' proven method). AI-only path is explicitly lower-confidence and flagged in artifacts.
-5. **Category/author IDs** on trainingint for blog posts — must be read from the live site, not guessed.
-6. **REST media upload limits / MIME rules** on the host.
+Build does **not** proceed on a site until all pass, and two of these can **branch the architecture**:
 
-`plan.py` build phase 0 is a **`probe.py` preflight** that resolves 1–3, 5, 6 against the live site and writes findings into `sites.yaml`; build does not proceed on a site until preflight passes.
+1. Authenticated `GET /wp-json/wp/v2/users/me` — REST + app password works.
+2. **Write→read round-trip of the live SEO-plugin meta field on a throwaway draft** → branches D1/D1′ (9.3).
+3. Which SEO plugin is active (Yoast/RankMath/none) + whether it emits `@graph` (9.3).
+4. **Push a test HTML draft, fetch rendered preview, confirm acceptable render** → branches body-format (9.4).
+5. Live category/author IDs, REST media MIME/size limits.
+6. Keyword-data path: Ubersuggest CSV present? else `low-confidence` AI-only.
+
+Probe results are written into `sites.yaml`; the throwaway test post + media are deleted.
 
 ## 12. Risks & failure modes
 
 | Risk | Mitigation |
 |---|---|
-| Google scaled-content-abuse penalty | Human publish gate (D2); weekly cadence cap (hard refuse); originality + n-gram gates; voice pass |
-| AI slop | Voice pass is its own stage; voice-damage n-gram check vs pre-SEO draft |
-| Internal-link 404s (softskills got bitten) | `linker.py` resolves only live URLs; back-link queue for not-yet-live siblings |
-| SEO-pass nukes voice | Voice-damage check refuses overwrite if prose drifted |
-| Keyword cannibalisation | Site-wide primary-keyword dedupe in `plan.py` |
-| WP REST blocked / app password off | Preflight probe (Section 11) gates build; thin helper plugin as fallback (9.5) |
-| Wrong SEO-plugin meta written | Per-site plugin detection; JSON-LD is plugin-independent |
-| Silent push partial-failure | Atomic stages; hard gates abort with explicit errors (blog-audit "no partial state" principle) |
-| Cost overrun | Per-article token budget tracked; cadence cap bounds spend (Section 13) |
+| Scaled-content-abuse penalty | D2 mandatory **edit** (not 1-click); cadence cap; originality + n-gram gates with real collected inputs (7.1) |
+| Reuse premise wrong (was true!) | Section 3 filesystem-verified; baseline = ~70% net-new |
+| WP meta not REST-writable | P0 write-read round-trip; D1′ helper-plugin branch |
+| Body HTML renders broken | P0 render round-trip before P3 |
+| Duplicate post on rerun | uid search-before-create; id recorded pre-flip (9.2) |
+| Queue corruption/concurrency | SQLite + lock + transactional state machine (5.2) |
+| Backlink queue unbounded / silent live edits | expiring capped jobs; backlinks become draft revisions for human approval (8) |
+| Unbounded LLM spend | Section 13 hard ceilings + abort + cost ledger |
+| Silent unattended failure | `runs` ledger + 24h FAILURE email (9.5) |
+| Cannibalisation via hallucinated keywords | AI-proposed slugs quarantined, excluded from guarantee (6) |
+| Locked-fact drift | vendored voice + sync.md, no symlink (10) |
 
-## 13. Cost model (rough, to refine in plan)
+## 13. Cost — hard ceilings (audit F7; deferral rejected)
 
-Per article ≈ 6 LLM-bearing stages (keyword, serp, draft, voice, seo, + planning share). Order-of-magnitude estimate to be quantified in the implementation plan with a real token measurement on the first article (no guessing committed to spec). Cadence cap (e.g. 3/week/site) bounds monthly spend; multi-site spend = linear in active sites.
+A daily × multi-site autonomous LLM loop is an open-ended recurring liability and must be bounded **in the design**:
 
-## 14. Build phases
+- **Per-run token ceiling** in `costguard.py`; a run exceeding it aborts and emails before continuing (kills prompt-loop runaways, e.g. iterative-fix loops).
+- **Per-site and global monthly USD budget** in `sites.yaml`; on breach the daily run refuses until the next month or a manual override.
+- Every run's tokens + USD logged to `runs` and shown in the digest.
+- **Order-of-magnitude estimate (to refine with a measured first article, not deferred):** ~6 LLM stages over long-form input/output ≈ low-single-digit USD per article at current Opus pricing; ~3/week/site ≈ low-tens USD/site/month; linear in active sites. If the measured first article diverges >2× from this, the cadence/model choice is revisited before scaling.
+
+## 14. Build phases (re-derived from the true ~70%-net-new baseline)
 
 | Phase | Deliverable | Gate |
 |---|---|---|
-| P0 | `probe.py` preflight + `sites.yaml`/`courses/trainingint.yaml` populated | All Section 11 items resolved for trainingint |
-| P1 | `plan.py` → queue; `keyword`+`serp`+`draft` stages | First slug produces a reviewable draft artifact |
-| P2 | `voice`+`seo` stages + gates | First article passes all hard gates + owner reads it, judges voice |
-| P3 | `wp_client` extend + `push` + `linker` | First live WP **draft** on trainingint with correct meta/media/links, owner 1-click publishes |
-| P4 | `digest` email + Task Scheduler | One article/day lands as draft unattended for a week |
-| P5 | Multi-site proof | Add one more site via config only; first draft lands there |
+| **P0** | `probe.py` + populated `sites.yaml`/`courses/trainingint.yaml` + WP app password created | All Section 11 pass; D1 vs D1′ and body-format **decided from live evidence** |
+| P1 | `state.py` (SQLite + lock + state machine), `plan.py`, `keyword`, `serp` (incl. `serp-bodies/`) | First slug → reviewable research artifacts; state machine survives a killed run |
+| P2 | `draft`, `voice`, `seo` + all Section 7.1 gates runnable | First article passes every hard gate; owner reads it and judges the voice for real |
+| P3 | `wp_client` (idempotent create, 9.2), `push`, `linker`, `costguard` | First live WP **draft** on trainingint with correct meta/media/links; rerun creates **no** duplicate; cost logged |
+| P4 | `digest` + Task Scheduler + 24h failure alert | One article/day lands as a draft unattended for a week; a forced failure produces an alert |
+| P5 | Multi-site proof | One more site added via config + P0 only; first draft lands there |
 
-## 15. Open questions for audit / owner
+## 15. Open questions for owner
 
-1. Cadence per site for v1 (softskills used MWF / 3-per-week)?
-2. Shared voice corpus across all sites, or per-site voice from day 1?
-3. `status=draft` (manual publish anytime) vs `status=future`+date (auto-goes-live on the scheduled day after the owner approves the queue) — which "1-click" model?
-4. Does `plan.py` auto-expand clusters with AI, or only from owner-listed slugs in `courses/<site>.yaml`?
+1. Cadence per site for v1 (softskills used 3/week MWF)?
+2. `status=draft` (publish anytime) vs `status=future`+date (auto-live on the day after owner approves the queue)?
+3. Per-site vs global monthly USD budget figures (Section 13)?
+4. Shared voice rule files across all sites, or per-site overrides from day 1?
 5. trainingint blog URL structure / category taxonomy to target.
+6. Does the owner accept that D2's penalty protection depends on a *genuine edit pass*, not a 1-click publish (Section 7.1)?
 
 ---
 
-*This spec fuses `D:/VP/BLOG_AUDIT/docs/superpowers/specs/2026-05-01-blog-audit-foundation-design.md` (multi-site WP push) and `D:/vp/softskills/1-NEW-SSKILLS/docs/superpowers/specs/2026-04-30-softskills-blog-seo-pipeline-design.md` (8-stage generation). Reuse claims in Section 3 are to be verified against actual source files during the implementation plan, not taken on faith.*
+*Reuse claims in Section 3 were filesystem-verified by an independent audit on 2026-05-19 (verdict: REWORK on v1; this v2 addresses every BLOCKER/MAJOR). Any future "reuse X" claim must be re-verified against the actual filesystem at the time the implementation plan is written, never inferred from a sibling project's README or status.*
