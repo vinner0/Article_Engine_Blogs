@@ -45,7 +45,11 @@ add_action('rest_api_init', function () {
                 return new WP_Error('ae_bad', 'bad id', ['status' => 400]);
             }
             foreach (($r->get_json_params()['meta'] ?? []) as $k => $v) {
-                update_post_meta($id, sanitize_key($k), wp_kses_post($v));
+                // SEO meta (rank_math_title, _yoast_wpseo_metadesc, ...) is PLAIN
+                // TEXT; the SEO plugin re-encodes on output. wp_kses_post would
+                // entity-encode '&' -> '&amp;' causing double-encoded <title>/
+                // <meta> (N6). sanitize_text_field strips tags w/o entity-encoding.
+                update_post_meta($id, sanitize_key($k), sanitize_text_field($v));
             }
             return ['ok' => true, 'id' => $id];
         },
