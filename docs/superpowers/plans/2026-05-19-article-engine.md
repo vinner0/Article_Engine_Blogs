@@ -12,7 +12,7 @@
 
 **v2 changes (from independent plan audit 2026-05-19):** B1/B2 — port transforms made deterministic, verify steps aligned to real source strings. M3 — idempotency reworked: an **always-installed** helper plugin registers `ae_content_uid` (show_in_rest) and a server-side `/ae/v1/find` route, because stock WP REST cannot query unregistered meta and silently drops it. M4 — Task 11 now uploads featured media + resolves internal links. M5 — ae-8 hard-gates on all required probe fields. M6/M7/M8 — ae-6 link-section retargeted to trainingint; Bash-tool note; jsonld gets a real adversarial test.
 
-**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it.
+**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan).
 
 **Reuse-verification (filesystem-checked + audit-confirmed 2026-05-19):** `D:/VP/BLOG_AUDIT/` = 0 Python, nothing forked. Verified sources used: softskills `.claude/commands/blog-{1,2,3,4,6,8}-*.md`, `voice/*.md` (6), `seo/{checklist,link-budget,schema-templates}.md + audit-budgets.yaml + pillar-map.yaml`. Audit confirmed all exist; transform strings below were checked against the real files.
 
@@ -219,7 +219,7 @@ pillar-map.yaml is reference topology only; live queue = courses/<site>.yaml.
 
 **Files:** Create `scripts/lib/ngram.py`, `tests/test_ngram.py`
 
-- [ ] **Step 1: Failing tests (incl. adversarial)** — `tests/test_ngram.py`:
+- [ ] **Step 1: Failing tests (incl. adversarial + real-calling-convention regression)** — `tests/test_ngram.py`:
 ```python
 from scripts.lib.ngram import shingles, overlap_8gram, voice_survival_ratio
 def test_shingles_count():
@@ -235,25 +235,46 @@ def test_voice_survival():
     v="one two three four five six seven eight nine ten eleven twelve"
     assert voice_survival_ratio(v,v) == 1.0
     assert voice_survival_ratio("completely different words none shared at all here now then",v) < 0.85
+def test_voice_survival_html_vs_markdown_not_false_blocked():  # ADVERSARIAL: real call
+    # ae-6/ae-8 call voice_survival_ratio(04-seo.html, 03-voice.md): HTML (tags,
+    # entities, smart quotes, embedded JSON-LD) vs markdown of the SAME prose must
+    # NOT trip the <0.85 gate. A _norm that does not strip markup scores ~0.4 here.
+    prose=("Writing a professional email is not hard once you accept that "
+           "clarity beats cleverness every single time you sit down to type one")
+    md="## Heading\n\n"+prose+"\n\n- a bullet point that is here too\n"
+    h=("<h2>Heading</h2><p>"+prose+"</p><ul><li>a bullet point that is here too"
+       "</li></ul><script type=\"application/ld+json\">{\"@type\":\"Article\"}</script>")
+    assert voice_survival_ratio(h, md) >= 0.85
+def test_overlap_dedupes_repeated_match():        # ADVERSARIAL: list (dup) fails this
+    rep="copied sentence that appears verbatim in the competitor body text here now"
+    art=rep+". filler words in between here. "+rep+"."
+    o=overlap_8gram(art, rep)
+    assert o and len(o)==len(set(o))
 ```
 - [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_ngram.py -v` → FAIL.
-- [ ] **Step 3: Implement** — `scripts/lib/ngram.py`:
+- [ ] **Step 3: Implement** — `scripts/lib/ngram.py` (v2.1: markup-agnostic tokenization + set-denominator + dedup overlap — see v2.1 fixes note):
 ```python
-import re
-def _norm(t): return re.findall(r"[a-z0-9]+", t.lower())
+import re, html, unicodedata
+def _norm(t):
+    # Strip HTML tags + decode entities + fold to ascii so the metric compares
+    # PROSE not markup: ae-6/ae-8 feed HTML (04-seo.html) vs markdown (03-voice.md),
+    # and WordPress emits smart quotes/entities. Plain text is unaffected (no-op).
+    t=html.unescape(re.sub(r"<[^>]+>", " ", t))
+    t=unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode()
+    return re.findall(r"[a-z0-9]+", t.lower())
 def shingles(text, n=8):
     w=_norm(text)
     return [tuple(w[i:i+n]) for i in range(len(w)-n+1)] if len(w)>=n else []
 def overlap_8gram(a,b,n=8):
     sb={s for s in shingles(b,n)}
-    return [" ".join(s) for s in shingles(a,n) if s in sb]
+    return list(dict.fromkeys(" ".join(s) for s in shingles(a,n) if s in sb))
 def voice_survival_ratio(seo_text, voice_text, n=8):
-    vs=shingles(voice_text,n)
+    vs=set(shingles(voice_text,n))           # distinct voice n-grams (denominator)
     if not vs: return 1.0
     se={s for s in shingles(seo_text,n)}
     return sum(1 for s in vs if s in se)/len(vs)
 ```
-- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_ngram.py -v` → PASS (4).
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_ngram.py -v` → PASS (6, incl. the HTML-vs-markdown + dedup regression tests that bite the pre-v2.1 impl).
 - [ ] **Step 5: Commit** — `git add scripts/lib/ngram.py tests/test_ngram.py && git commit -m "feat: 8-gram overlap + voice-survival (adversarial-tested)"`
 
 ---
@@ -1079,6 +1100,8 @@ No spec requirement is matched to a task name only; each maps to a concrete step
 **4. Adversarial-test trace (each named test vs a trivial stub):**
 - ngram `test_overlap_no_op_implementation_fails`: stub `return []` → `assert overlap_8gram(t,t)` fails. ✅ bites.
 - ngram voice half: stub `return 1.0` → `< 0.85` assert fails. ✅
+- ngram `test_voice_survival_html_vs_markdown_not_false_blocked`: the pre-v2.1 non-stripping `_norm` scores ~0.4 on identical prose in HTML-vs-md → `>= 0.85` fails. ✅ bites the original plan code (the defect the quality gate caught).
+- ngram `test_overlap_dedupes_repeated_match`: list-returning (dup) overlap → `len(o)==len(set(o))` fails. ✅
 - originality `test_no_op_pass_stub_fails`: stub `{"passes":True}` → `assert not r["passes"]` fails. ✅
 - link_budget `test_too_many_primary_occurrences`: stub `return []` → `any("primary_course_occurrences"...)` fails. ✅
 - jsonld `test_suppress_skips_node`: stub ignoring `suppress` still emits FAQPage → `assert "FAQPage" not in types` fails (M8 fixed — was weak). ✅
