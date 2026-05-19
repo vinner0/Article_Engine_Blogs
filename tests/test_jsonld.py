@@ -17,3 +17,34 @@ def test_three_nodes_and_content():
 def test_suppress_skips_node():   # ADVERSARIAL: a stub that ignores suppress fails
     types={n["@type"] for n in _b(suppress={"FAQPage"})["@graph"]}
     assert "FAQPage" not in types and "Article" in types
+def test_suppress_article_keeps_others():   # the real seo_plugin_emits_graph case
+    types={n["@type"] for n in _b(suppress={"Article"})["@graph"]}
+    assert "Article" not in types and "FAQPage" in types
+def test_suppress_breadcrumb():
+    types={n["@type"] for n in _b(suppress={"BreadcrumbList"})["@graph"]}
+    assert "BreadcrumbList" not in types and "Article" in types
+def test_faqs_empty_no_faqpage_node():      # guards the `and faqs` short-circuit
+    types={n["@type"] for n in _b(faqs=[])["@graph"]}
+    assert "FAQPage" not in types and "Article" in types
+def test_breadcrumb_empty_no_node():
+    types={n["@type"] for n in _b(breadcrumb=[])["@graph"]}
+    assert "BreadcrumbList" not in types
+def test_all_suppressed_empty_graph():
+    assert _b(suppress={"Article","FAQPage","BreadcrumbList"})["@graph"]==[]
+def test_multi_faq_positions_and_count():
+    g=_b(faqs=[{"q":"Q1?","a":"A1."},{"q":"Q2?","a":"A2."}])["@graph"]
+    fp=[n for n in g if n["@type"]=="FAQPage"][0]
+    assert [m["name"] for m in fp["mainEntity"]]==["Q1?","Q2?"]
+def test_script_breakout_escaped():   # ADVERSARIAL C1: raw json.dumps fails this
+    raw=build_jsonld(url="https://t/x/",title="T",description="d",author="A",
+        publisher="P",faqs=[{"q":"Q?","a":"x </script><script>alert(1)</script>"}],
+        breadcrumb=[("Home","https://t/")])
+    assert "</script>" not in raw and "<\\/script>" in raw
+    assert json.loads(raw)["@graph"]                 # still valid JSON
+def test_article_optional_fields():   # I1: image/dates emitted only when provided
+    art=[n for n in _b(image_url="https://t/i.jpg",date_published="2026-06-01",
+            date_modified="2026-06-02")["@graph"] if n["@type"]=="Article"][0]
+    assert art["image"]=="https://t/i.jpg" and art["datePublished"]=="2026-06-01" \
+       and art["dateModified"]=="2026-06-02"
+    art2=[n for n in _b()["@graph"] if n["@type"]=="Article"][0]
+    assert "image" not in art2 and "datePublished" not in art2  # absent by default
