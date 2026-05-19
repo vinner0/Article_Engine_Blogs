@@ -12,7 +12,7 @@
 
 **v2 changes (from independent plan audit 2026-05-19):** B1/B2 — port transforms made deterministic, verify steps aligned to real source strings. M3 — idempotency reworked: an **always-installed** helper plugin registers `ae_content_uid` (show_in_rest) and a server-side `/ae/v1/find` route, because stock WP REST cannot query unregistered meta and silently drops it. M4 — Task 11 now uploads featured media + resolves internal links. M5 — ae-8 hard-gates on all required probe fields. M6/M7/M8 — ae-6 link-section retargeted to trainingint; Bash-tool note; jsonld gets a real adversarial test.
 
-**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan). **N2 (per-task quality review, Task 5)** same defect class in `scripts/lib/originality.py`: `_has_framework` matched only markdown `1./-/*` so it returned False on the real HTML `04-seo.html` (silently degrading the ≥2-of-4 gate); `_has_stat` matched any >6-char fragment so non-numeric `stats.md` lines (course names, bio, headers) false-passed; `_has_analogy` fired on "like you"; `_has_story` matched YAML-key noise. Fixed: framework counts HTML `<li>` + markdown; stat requires a digit; analogy requires a `like a/an/the` simile (or explicit cue); story skips YAML/header/blockquote lines. New real-input adversarial tests (real voice files + HTML article). **C2a left for owner:** `_has_story` is still verbatim-prefix (won't detect paraphrased signature stories) — flagged in Task 5 for an owner design decision, deliberately NOT auto-redesigned. **N3 (per-task quality review, Task 6)** `scripts/lib/link_budget.validate_links` had no code defect but 5 of 10 violation branches had zero tests (a `return []` stub passed them — and Task 14 wires this as a HARD publish gate), it dropped link-budget.md L13's "no naked URLs as anchor" rule, and a missing inv key (the dict is built by ae-6 in LLM prose) crashed with a bare `KeyError`. Fixed: added naked-URL ban (source-faithful), missing-key → named `inventory_incomplete` violation (fail diagnostic not crash), and 6 adversarial tests so every violation branch + the missing-key path is constrained. **N4 (per-task quality review, Task 7)** `scripts/lib/jsonld.build_jsonld` — CRITICAL: `json.dumps` does not escape `/`, so a FAQ/title containing `</script>` would break out of the in-HTML `<script type="application/ld+json">` block ae-6 embeds it in (HTML-corruption/XSS); fixed with the standard `.replace("</","<\\/")` (valid JSON, json.loads unaffected). Added optional `image_url/date_published/date_modified` (Google Article rich-results need them) — lib now capable; ae-6/ae-8 date-wiring escalated to owner (dates unknown at ae-6 time). 7 previously-untested branches (suppress Article/Breadcrumb, faqs=[], breadcrumb=[], all-suppressed, multi-FAQ) now have adversarial tests. **N4-I1 left for owner:** JSON-LD image/date data-flow (scheduling is post-ae-6) — flagged in Task 7. **I2 (probe granularity):** binary `seo_plugin_emits_graph` can't express "plugin emits BreadcrumbList only"; ae-6 must pass a precise `suppress` set — revisit in Task 10/15 probe design. **N5 (per-task quality review, Task 8)** `scripts/lib/wp_client.py` had NO code defect (cross-task contract verified) but 6 of 9 public methods had zero tests — incl. the 3 gate-critical ones (`find_post_by_slug` hit-path = the idempotency duplicate-guard, `update_post` = the re-run path, `read_post_meta` = the probe-meta-writable decision); a `return None`/constant stub passed all 4 plan tests while silently disabling the duplicate guard. Added 8 tests so every method + find-uid 200/404/5xx + slug empty/hit + meta present/absent is constrained; added a fire-and-forget comment to `delete_post` (I4). Plan-level notes flagged: I3 `upload_media` returns id only (Task 11 `resolve_inline_media` deliberately bypasses it for `source_url` — documented), m1 `ae_base` `.replace("/wp/v2","/ae/v1")` is fragile for a non-default REST prefix (Task 16 multi-site: set `ae_api_base` explicitly, don't derive). **N6 (per-task quality review, Task 9)** `wp-helper-plugin/ae-helper.php` `/ae/v1/meta` route sanitized SEO meta with `wp_kses_post($v)` — wrong tool for the data shape (same class as N1/N4): SEO meta (rank_math_title, _yoast_wpseo_metadesc) is plain text and the SEO plugin re-encodes on output, so `wp_kses_post` double-encodes `&`→`&amp;`→visible `&amp;` in `<title>`/`<meta>`, defeating the route's entire §8.4 purpose. Fixed → `sanitize_text_field($v)`. Verified correct (no change): `post_status='any'` DOES include `future` posts (scheduled-post idempotency is real — WP excludes only inherit/trash/auto-draft from `any`); `sanitize_key` preserves `_yoast_wpseo_*`/`rank_math_*` keys; top-level `auth_callback` on `register_post_meta` is correct so `ae_content_uid` is REST-writable. **N7 (per-task quality review, Task 10)** `scripts/probe.py` had NO code defect (probe logic verified correct; `detect_seo_plugin` reliable for trainingint since RankMath/Yoast register meta REST-visibly) but two gate-critical coverage gaps (N3/N5 class): `detect_seo_plugin` had zero tests (it picks the meta key for the `seo_meta_rest_writable` gate — misdetect = wrong gate) and `probe_uid_roundtrip` only tested the false path (the true path + the id-mismatch case gate publishing via Task 14 gate 1; a regression to `is not None` would pass). Added 5 tests (uid-roundtrip true + wrong-id adversarial, detect-plugin rankmath/yoast/none) and added `seo_plugin_emits_graph` to `run()`'s printed manual-items reminder (D — it is a Task-14 hard-gate manual field). **E (accepted):** `yaml.safe_dump` drops sites.yaml comments on first probe run — acknowledged plan tradeoff (probe fields are auto-managed), no ruamel dependency added.
+**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan). **N2 (per-task quality review, Task 5)** same defect class in `scripts/lib/originality.py`: `_has_framework` matched only markdown `1./-/*` so it returned False on the real HTML `04-seo.html` (silently degrading the ≥2-of-4 gate); `_has_stat` matched any >6-char fragment so non-numeric `stats.md` lines (course names, bio, headers) false-passed; `_has_analogy` fired on "like you"; `_has_story` matched YAML-key noise. Fixed: framework counts HTML `<li>` + markdown; stat requires a digit; analogy requires a `like a/an/the` simile (or explicit cue); story skips YAML/header/blockquote lines. New real-input adversarial tests (real voice files + HTML article). **C2a left for owner:** `_has_story` is still verbatim-prefix (won't detect paraphrased signature stories) — flagged in Task 5 for an owner design decision, deliberately NOT auto-redesigned. **N3 (per-task quality review, Task 6)** `scripts/lib/link_budget.validate_links` had no code defect but 5 of 10 violation branches had zero tests (a `return []` stub passed them — and Task 14 wires this as a HARD publish gate), it dropped link-budget.md L13's "no naked URLs as anchor" rule, and a missing inv key (the dict is built by ae-6 in LLM prose) crashed with a bare `KeyError`. Fixed: added naked-URL ban (source-faithful), missing-key → named `inventory_incomplete` violation (fail diagnostic not crash), and 6 adversarial tests so every violation branch + the missing-key path is constrained. **N4 (per-task quality review, Task 7)** `scripts/lib/jsonld.build_jsonld` — CRITICAL: `json.dumps` does not escape `/`, so a FAQ/title containing `</script>` would break out of the in-HTML `<script type="application/ld+json">` block ae-6 embeds it in (HTML-corruption/XSS); fixed with the standard `.replace("</","<\\/")` (valid JSON, json.loads unaffected). Added optional `image_url/date_published/date_modified` (Google Article rich-results need them) — lib now capable; ae-6/ae-8 date-wiring escalated to owner (dates unknown at ae-6 time). 7 previously-untested branches (suppress Article/Breadcrumb, faqs=[], breadcrumb=[], all-suppressed, multi-FAQ) now have adversarial tests. **N4-I1 left for owner:** JSON-LD image/date data-flow (scheduling is post-ae-6) — flagged in Task 7. **I2 (probe granularity):** binary `seo_plugin_emits_graph` can't express "plugin emits BreadcrumbList only"; ae-6 must pass a precise `suppress` set — revisit in Task 10/15 probe design. **N5 (per-task quality review, Task 8)** `scripts/lib/wp_client.py` had NO code defect (cross-task contract verified) but 6 of 9 public methods had zero tests — incl. the 3 gate-critical ones (`find_post_by_slug` hit-path = the idempotency duplicate-guard, `update_post` = the re-run path, `read_post_meta` = the probe-meta-writable decision); a `return None`/constant stub passed all 4 plan tests while silently disabling the duplicate guard. Added 8 tests so every method + find-uid 200/404/5xx + slug empty/hit + meta present/absent is constrained; added a fire-and-forget comment to `delete_post` (I4). Plan-level notes flagged: I3 `upload_media` returns id only (Task 11 `resolve_inline_media` deliberately bypasses it for `source_url` — documented), m1 `ae_base` `.replace("/wp/v2","/ae/v1")` is fragile for a non-default REST prefix (Task 16 multi-site: set `ae_api_base` explicitly, don't derive). **N6 (per-task quality review, Task 9)** `wp-helper-plugin/ae-helper.php` `/ae/v1/meta` route sanitized SEO meta with `wp_kses_post($v)` — wrong tool for the data shape (same class as N1/N4): SEO meta (rank_math_title, _yoast_wpseo_metadesc) is plain text and the SEO plugin re-encodes on output, so `wp_kses_post` double-encodes `&`→`&amp;`→visible `&amp;` in `<title>`/`<meta>`, defeating the route's entire §8.4 purpose. Fixed → `sanitize_text_field($v)`. Verified correct (no change): `post_status='any'` DOES include `future` posts (scheduled-post idempotency is real — WP excludes only inherit/trash/auto-draft from `any`); `sanitize_key` preserves `_yoast_wpseo_*`/`rank_math_*` keys; top-level `auth_callback` on `register_post_meta` is correct so `ae_content_uid` is REST-writable. **N7 (per-task quality review, Task 10)** `scripts/probe.py` had NO code defect (probe logic verified correct; `detect_seo_plugin` reliable for trainingint since RankMath/Yoast register meta REST-visibly) but two gate-critical coverage gaps (N3/N5 class): `detect_seo_plugin` had zero tests (it picks the meta key for the `seo_meta_rest_writable` gate — misdetect = wrong gate) and `probe_uid_roundtrip` only tested the false path (the true path + the id-mismatch case gate publishing via Task 14 gate 1; a regression to `is not None` would pass). Added 5 tests (uid-roundtrip true + wrong-id adversarial, detect-plugin rankmath/yoast/none) and added `seo_plugin_emits_graph` to `run()`'s printed manual-items reminder (D — it is a Task-14 hard-gate manual field). **E (accepted):** `yaml.safe_dump` drops sites.yaml comments on first probe run — acknowledged plan tradeoff (probe fields are auto-managed), no ruamel dependency added. **N8 (per-task quality review, Task 11)** `scripts/wp_publish.resolve_internal_links` shipped malformed href-less `<a data-ae-unresolved="1">` to WordPress (spec §8.5 "no broken links" violation) in two real-HTML cases the plan's single-char test never exercised (obs-65/66 class): the per-slug `count=1` loop stripped only the FIRST anchor when one unresolved sibling slug appeared 2+ times (intro + CTA — normal), and missing `re.DOTALL` left any anchor whose text spans a newline / wraps `<strong>` unstripped. Fixed: single global DOTALL `re.sub` (drop the count=1 loop). Plus the `publish_article` integration matrix was untested (helpers tested only in isolation): added end-to-end tests for featured_media, `seo_meta_rest_writable=False`+helper (§8.4), find-by-slug fallback, status_map+images_dir threading, and missing-inline-image fail-clean (raises before any WP write — verified resolution runs before create/update, so no partial post). M1 (resolve_inline_media bypasses wp.upload_media for source_url — same as Task 8 I3, documented) and content_uid 64-bit truncation noted, no change.
 
 **Reuse-verification (filesystem-checked + audit-confirmed 2026-05-19):** `D:/VP/BLOG_AUDIT/` = 0 Python, nothing forked. Verified sources used: softskills `.claude/commands/blog-{1,2,3,4,6,8}-*.md`, `voice/*.md` (6), `seo/{checklist,link-budget,schema-templates}.md + audit-budgets.yaml + pillar-map.yaml`. Audit confirmed all exist; transform strings below were checked against the real files.
 
@@ -903,9 +903,9 @@ Run `python scripts/probe.py trainingint`. **HARD GATE:** do not start Task 11's
 
 **Files:** Create `scripts/wp_publish.py`, `tests/test_wp_publish.py`
 
-- [ ] **Step 1: Failing tests — duplicate-post + media + link-resolution + helper-meta** — `tests/test_wp_publish.py`:
+- [ ] **Step 1: Failing tests — duplicate-post + media + link-resolution + helper-meta + publish_article integration matrix (N8)** — `tests/test_wp_publish.py`:
 ```python
-import responses
+import responses, pytest
 from scripts.lib.wp_client import WPClient
 from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media
 WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
@@ -964,6 +964,76 @@ def test_tags_included_when_passed():                          # spec §8.3 tags
     publish_article(wp(),"u","s","T","<p>b</p>",{},
                      "2026-06-01T09:00:00",5,1, tags=[3,4])
     assert b'"tags"' in responses.calls[-1].request.body
+
+def test_resolve_internal_links_same_slug_twice_and_nested():  # ADVERSARIAL §8.5: C1+C2
+    html=('<p>Intro <a href="ae:sibling:how-to-z" class="x">Z one</a>.</p>'
+          '<p>Later <a href="ae:sibling:how-to-z">\n  <strong>Z two</strong>\n</a>.</p>'
+          '<a href="ae:sibling:how-to-y">Y</a>')
+    status={"how-to-y":{"url":"https://t/blog/how-to-y/"}}
+    out,unresolved=resolve_internal_links(html,status)
+    assert "data-ae-unresolved" not in out       # pre-fix leaves >=1 (count=1 / no DOTALL)
+    assert "ae:sibling:" not in out
+    assert "<a " in out and 'href="https://t/blog/how-to-y/"' in out  # resolved still linked
+    assert "Z one" in out and "Z two" in out                          # unresolved -> text
+    assert unresolved.count("how-to-z")==2
+
+@responses.activate
+def test_publish_with_featured_media(tmp_path):                # B1: hero upload path
+    (tmp_path/"hero.jpg").write_bytes(b"\xff\xd8jpeg")
+    responses.get(f"{AE}/find", status=404)
+    responses.get(f"{WP}/posts", json=[], status=200)
+    responses.post(f"{WP}/media", json={"id":77}, status=201)
+    responses.post(f"{WP}/posts", json={"id":200}, status=201)
+    pid=publish_article(wp(),"u","s","T","<p>b</p>",{}, "2026-06-01T09:00:00",5,1,
+                        featured_path=str(tmp_path/"hero.jpg"))
+    assert pid==200 and b'"featured_media"' in responses.calls[-1].request.body
+
+@responses.activate
+def test_publish_seo_meta_not_rest_writable_uses_helper():     # B2: §8.4 helper branch
+    responses.get(f"{AE}/find", status=404)
+    responses.get(f"{WP}/posts", json=[], status=200)
+    responses.post(f"{WP}/posts", json={"id":201}, status=201)
+    h=responses.post(f"{AE}/meta/201", json={"ok":True,"id":201}, status=200)
+    publish_article(wp(),"u","s","T","<p>b</p>",{"rank_math_title":"RT"},
+                    "2026-06-01T09:00:00",5,1, seo_meta_rest_writable=False)
+    bodies=[c.request.body for c in responses.calls
+            if c.request.method=="POST" and c.request.url.startswith(f"{WP}/posts")]
+    assert bodies and b'"rank_math_title"' not in bodies[0] and b'"ae_content_uid"' in bodies[0]
+    assert h.call_count==1
+
+@responses.activate
+def test_publish_find_by_slug_fallback_updates():              # B3: uid-miss slug-hit
+    responses.get(f"{AE}/find", status=404)
+    responses.get(f"{WP}/posts", json=[{"id":150}], status=200)
+    cr=responses.post(f"{WP}/posts", json={"id":999}, status=201)
+    up=responses.post(f"{WP}/posts/150", json={"id":150}, status=200)
+    pid=publish_article(wp(),"u","existing-slug","T","<p>b</p>",{},
+                        "2026-06-01T09:00:00",5,1)
+    assert pid==150 and cr.call_count==0 and up.call_count==1
+
+@responses.activate
+def test_publish_threads_status_map_and_images_dir(tmp_path):  # B4: wired through publish
+    (tmp_path/"a.jpg").write_bytes(b"\xff\xd8x")
+    responses.get(f"{AE}/find", status=404)
+    responses.get(f"{WP}/posts", json=[], status=200)
+    responses.post(f"{WP}/media", json={"id":9,
+        "source_url":"https://www.trainingint.com/wp-content/uploads/a.jpg"}, status=201)
+    responses.post(f"{WP}/posts", json={"id":300}, status=201)
+    html='<a href="ae:sibling:sib">S</a> <img src="ae:img:a.jpg">'
+    publish_article(wp(),"u","s","T",html,{}, "2026-06-01T09:00:00",5,1,
+        status_map={"sib":{"url":"https://t/blog/sib/"}}, images_dir=str(tmp_path))
+    body=responses.calls[-1].request.body
+    assert b"https://t/blog/sib/" in body and b"wp-content/uploads/a.jpg" in body
+    assert b"ae:sibling:" not in body and b"ae:img:" not in body
+
+@responses.activate
+def test_missing_inline_image_aborts_before_any_wp_write(tmp_path):  # B6: fail-clean
+    responses.get(f"{AE}/find", status=404)
+    cr=responses.post(f"{WP}/posts", json={"id":1}, status=201)
+    with pytest.raises(FileNotFoundError):
+        publish_article(wp(),"u","s","T",'<img src="ae:img:missing.jpg">',{},
+            "2026-06-01T09:00:00",5,1, images_dir=str(tmp_path))
+    assert cr.call_count==0     # no post created — no partial state
 ```
 - [ ] **Step 2: Run, verify fail** — FAIL.
 - [ ] **Step 3: Implement** — `scripts/wp_publish.py`:
@@ -989,9 +1059,11 @@ def resolve_internal_links(html, status_map):
         unresolved.append(slug)
         return 'data-ae-unresolved="1"'
     html=re.sub(r'href="ae:sibling:([^"]+)"', repl, html)
-    # turn any anchor we could not resolve into plain text (drop the <a> wrapper)
-    for slug in set(unresolved):
-        html=re.sub(r'<a [^>]*data-ae-unresolved="1"[^>]*>(.*?)</a>', r'\1', html, count=1)
+    # Drop EVERY unresolved anchor's <a> wrapper -> plain text. Global (not
+    # count=1: the same slug can appear 2+ times) and DOTALL (anchor text may
+    # span newlines / wrap <strong>). Never ship a broken href-less <a> (§8.5).
+    html=re.sub(r'<a [^>]*data-ae-unresolved="1"[^>]*>(.*?)</a>', r'\1', html,
+                flags=re.DOTALL)
     return html, unresolved
 
 def upload_featured(wp, image_path):
@@ -1045,7 +1117,7 @@ def publish_article(wp, uid, slug, title, html, meta, scheduled_iso,
         push_meta_via_helper(wp, pid, meta)
     return pid
 ```
-- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_wp_publish.py -v` → PASS (6, incl. duplicate-post + link-resolution + inline-media + tags + helper-meta).
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_wp_publish.py -v` → PASS (12, incl. duplicate-post + link-resolution + same-slug/nested §8.5 adversarial + inline-media + tags + featured-media + helper-meta-branch + slug-fallback + status_map/images_dir threading + missing-image fail-clean).
 - [ ] **Step 5: Commit** — `git add scripts/wp_publish.py tests/test_wp_publish.py && git commit -m "feat: idempotent publisher + media + internal-link resolution (adversarial-tested)"`
 
 ---
