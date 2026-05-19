@@ -32,5 +32,7 @@ class WPClient:
     def read_post_meta(self, pid, key):
         return self._get(f"/posts/{pid}").get("meta",{}).get(key)
     def delete_post(self, pid):
+        # Fire-and-forget: callers invoke this in finally blocks (probe cleanup);
+        # a cleanup failure must not raise and mask the primary result.
         requests.delete(f"{self.base}/posts/{pid}",params={"force":True},
                         auth=self.auth,timeout=self.timeout)
