@@ -1,68 +1,55 @@
-# Article Engine Implementation Plan
+# Article Engine Implementation Plan (v2 — post plan-audit)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
+> **Execute strictly by Task number** (phases are labels, not execution order — task deps are satisfied in numeric order).
+> **All shell steps run via the Bash tool, not PowerShell** (uses `cp {a,b}`, `grep -li`, heredocs, `sed`).
 
-**Goal:** Build a human-driven Claude Code slash-command pipeline (modelled on the proven softskills `blog-1…8` workflow) that the owner runs in batches of 5–15 articles, reviews, then publishes into WordPress as future-dated scheduled posts.
+**Goal:** A human-driven Claude Code slash-command pipeline (modelled on the proven softskills `blog-1…8` workflow) that the owner runs in batches of 5–15 articles, reviews, then publishes into WordPress as future-dated scheduled posts.
 
-**Architecture:** Per spec v3 (`docs/superpowers/specs/2026-05-19-article-engine-design.md`). Generation = Claude Code (no API key). The only Python is: P0 live-site probe, four pure-function gate libraries (n-gram, originality, link-budget, JSON-LD), a thin WP REST client, and an idempotent scheduled-post publisher. Everything else is prompt files + vendored reference DATA. WordPress's own scheduler publishes the dated posts.
+**Architecture:** Per spec v3 (`docs/superpowers/specs/2026-05-19-article-engine-design.md`). Generation = Claude Code (no API key). Python only for: a small always-installed WP helper plugin, a live-site probe, four pure gate libs, a thin WP REST client, an idempotent scheduled-post publisher. WordPress's own scheduler publishes the dated posts.
 
-**Tech Stack:** Python 3.11+, `requests`, `PyYAML`, `python-dotenv`, `pytest`, `responses` (HTTP mocking). Slash commands = Markdown prompt files. WP REST API v2 + application passwords. Pexels REST (`PEXELS_API_KEY`).
+**Tech Stack:** Python 3.11+, `requests`, `PyYAML`, `python-dotenv`, `pytest`, `responses`. PHP 7.4+ (helper plugin). Slash commands = Markdown prompt files. WP REST v2 + application passwords. Pexels REST (`PEXELS_API_KEY`).
 
-**Reuse-verification note (filesystem-checked 2026-05-19):** `D:/VP/BLOG_AUDIT/` has **0 Python** — nothing is forked from it. Genuine sources: softskills `.claude/commands/blog-{1,2,3,4,6,8}.md` (no blog-5; blog-7 Lighthouse is dropped — no Astro build in WP model), `src/lib/link-budget.ts` + `link-health.ts` (logic to port), `voice/*.md` (6 files), `seo/{checklist.md,link-budget.md,schema-templates.md,audit-budgets.yaml,pillar-map.yaml}`. Every port task below cites the exact verified source path. Any "reuse X" must be re-verified at execution time, never inferred.
+**v2 changes (from independent plan audit 2026-05-19):** B1/B2 — port transforms made deterministic, verify steps aligned to real source strings. M3 — idempotency reworked: an **always-installed** helper plugin registers `ae_content_uid` (show_in_rest) and a server-side `/ae/v1/find` route, because stock WP REST cannot query unregistered meta and silently drops it. M4 — Task 11 now uploads featured media + resolves internal links. M5 — ae-8 hard-gates on all required probe fields. M6/M7/M8 — ae-6 link-section retargeted to trainingint; Bash-tool note; jsonld gets a real adversarial test.
+
+**Reuse-verification (filesystem-checked + audit-confirmed 2026-05-19):** `D:/VP/BLOG_AUDIT/` = 0 Python, nothing forked. Verified sources used: softskills `.claude/commands/blog-{1,2,3,4,6,8}-*.md`, `voice/*.md` (6), `seo/{checklist,link-budget,schema-templates}.md + audit-budgets.yaml + pillar-map.yaml`. Audit confirmed all exist; transform strings below were checked against the real files.
 
 ---
 
-## File Structure (decomposition locked here)
+## File Structure
 
 | File | Responsibility |
 |---|---|
-| `pyproject.toml`, `requirements.txt`, `.gitignore`, `tests/conftest.py` | Project scaffold + test config |
-| `config/sites.yaml` | Per-site registry: WP base URL, app-password env var, link-budget overrides, probe results (written by probe) |
-| `courses/trainingint.yaml` | Course → cluster → article topic spine (the topic queue) |
-| `voice/` (6 `.md`) + `voice/sync.md` | Vendored softskills voice rules + provenance/sync doc |
-| `seo/` (5 files) + `seo/sync.md` | Vendored softskills SEO checklist/link-budget/schema/pillar-map |
-| `scripts/lib/ngram.py` | Pure: 8-word shingle overlap (anti-plagiarism + voice-damage) |
-| `scripts/lib/originality.py` | Pure: ≥2-of-4 originality gate |
-| `scripts/lib/link_budget.py` | Pure: per-site link-budget validator (ported from `link-budget.ts`) |
-| `scripts/lib/jsonld.py` | Pure: Article + FAQPage + BreadcrumbList JSON-LD builder |
-| `scripts/lib/wp_client.py` | Thin WP REST client: auth, find/create/update post, upload media, get/set meta |
-| `scripts/probe.py` | P0 design-gating preflight; writes results into `config/sites.yaml` |
-| `scripts/wp_publish.py` | Idempotent scheduled-post publisher (uses wp_client + gates) |
-| `.claude/commands/ae-{1,2,3,4,6}-*.md`, `ae-batch.md`, `ae-8-publish.md` | The pipeline (ported/adapted prompts) |
-| `wp-helper-plugin/` | CONDITIONAL — only if probe proves SEO-meta not REST-writable (Task 14) |
-
-Pure libs (`ngram`, `originality`, `link_budget`, `jsonld`) are isolated and fully unit-tested with **adversarial tests** (a no-op/buggy implementation must fail). `wp_client`/`wp_publish` are tested against mocked REST. `probe` is tested against mocked REST + a real-site dry run in Task 8.
+| `pyproject.toml`,`requirements.txt`,`.gitignore`,`tests/conftest.py` | Scaffold + test config |
+| `config/sites.yaml` | Per-site registry + probe results |
+| `courses/trainingint.yaml` | Course→cluster→article topic spine |
+| `voice/` (6 md)+`voice/sync.md`, `seo/` (5)+`seo/sync.md` | Vendored softskills DATA + provenance |
+| `scripts/lib/ngram.py` | 8-gram overlap (anti-plagiarism + voice-damage) |
+| `scripts/lib/originality.py` | ≥2-of-4 originality gate |
+| `scripts/lib/link_budget.py` | Per-site link-budget validator |
+| `scripts/lib/jsonld.py` | Article+FAQPage+BreadcrumbList builder |
+| `scripts/lib/wp_client.py` | WP REST + `/ae/v1/find` client |
+| `wp-helper-plugin/ae-helper.php` | **Always installed.** Registers `ae_content_uid` (REST) + `/ae/v1/find` route; conditional `/ae/v1/meta` route |
+| `scripts/probe.py` | P0 design-gating preflight (incl. uid round-trip) |
+| `scripts/wp_publish.py` | Idempotent scheduled-post publisher + media + link resolution |
+| `.claude/commands/ae-{1,2,3,4,6}-*.md`,`ae-batch.md`,`ae-8-publish.md` | Pipeline prompts |
 
 ---
 
-## Phase P0 — Scaffold, config, probe (design-gating)
-
 ### Task 1: Project scaffold
 
-**Files:**
-- Create: `D:/VP/ARTICLE_ENGINE/requirements.txt`
-- Create: `D:/VP/ARTICLE_ENGINE/pyproject.toml`
-- Create: `D:/VP/ARTICLE_ENGINE/.gitignore`
-- Create: `D:/VP/ARTICLE_ENGINE/tests/conftest.py`
-- Create: `D:/VP/ARTICLE_ENGINE/tests/test_scaffold.py`
+**Files:** Create `requirements.txt`, `pyproject.toml`, `.gitignore`, `tests/conftest.py`, `tests/test_scaffold.py`, `scripts/__init__.py`, `scripts/lib/__init__.py`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/test_scaffold.py`:
+- [ ] **Step 1: Write the failing test** — `tests/test_scaffold.py`:
 ```python
 import importlib
 def test_libs_importable():
-    for m in ("scripts.lib.ngram", "scripts.lib.originality",
-              "scripts.lib.link_budget", "scripts.lib.jsonld"):
+    for m in ("scripts.lib.ngram","scripts.lib.originality",
+              "scripts.lib.link_budget","scripts.lib.jsonld"):
         importlib.import_module(m)
 ```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `cd D:/VP/ARTICLE_ENGINE && python -m pytest tests/test_scaffold.py -v`
-Expected: FAIL (ModuleNotFoundError — modules not yet created).
-
-- [ ] **Step 3: Create scaffold files**
+- [ ] **Step 2: Run, verify fail** — `cd D:/VP/ARTICLE_ENGINE && python -m pytest tests/test_scaffold.py -v` → FAIL (ModuleNotFoundError).
+- [ ] **Step 3: Create files**
 
 `requirements.txt`:
 ```
@@ -72,14 +59,12 @@ python-dotenv>=1.0
 pytest>=8.0
 responses>=0.25
 ```
-
 `pyproject.toml`:
 ```toml
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
 ```
-
 `.gitignore`:
 ```
 credentials/.env
@@ -89,64 +74,44 @@ __pycache__/
 content/
 imports/
 ```
-
 `tests/conftest.py`:
 ```python
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 ```
-
-Create empty package markers: `scripts/__init__.py`, `scripts/lib/__init__.py` (empty files).
-
-- [ ] **Step 4: Re-run test — still fails until libs exist (expected)**
-
-Run: `python -m pytest tests/test_scaffold.py -v`
-Expected: still FAIL (libs created in later tasks). This test becomes the green gate at end of Task 6. Leave it; do NOT stub the libs to pass it now.
-
-- [ ] **Step 5: Commit**
-
-```bash
-cd D:/VP/ARTICLE_ENGINE && git add -A && git commit -m "chore: project scaffold + deps"
-```
+Create empty `scripts/__init__.py`, `scripts/lib/__init__.py`.
+- [ ] **Step 4: Re-run** — still FAIL until Task 7 (libs created). Do NOT stub libs to pass. This is the green gate at end of Task 7.
+- [ ] **Step 5: Commit** — `git add -A && git commit -m "chore: scaffold + deps"`
 
 ---
 
-### Task 2: `config/sites.yaml` and `courses/trainingint.yaml`
+### Task 2: `config/sites.yaml` + `courses/trainingint.yaml`
 
-**Files:**
-- Create: `config/sites.yaml`
-- Create: `courses/trainingint.yaml`
-- Create: `tests/test_config.py`
+**Files:** Create `config/sites.yaml`, `courses/trainingint.yaml`, `tests/test_config.py`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/test_config.py`:
+- [ ] **Step 1: Failing test** — `tests/test_config.py`:
 ```python
 import yaml, pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-
 def test_sites_yaml_shape():
-    cfg = yaml.safe_load((ROOT / "config/sites.yaml").read_text())
-    s = cfg["sites"]["trainingint"]
+    s = yaml.safe_load((ROOT/"config/sites.yaml").read_text())["sites"]["trainingint"]
     assert s["wp_api_base"].endswith("/wp-json/wp/v2")
     assert s["app_password_env"] == "WP_TRAININGINT"
     assert "link_budget" in s and "probe" in s
-
+    for k in ("rest_ok","seo_meta_rest_writable","uid_roundtrip_ok",
+              "default_category_id","default_author_id","html_renders_ok",
+              "wpcron_reliable","keyword_data"):
+        assert k in s["probe"], k
 def test_courses_yaml_shape():
-    c = yaml.safe_load((ROOT / "courses/trainingint.yaml").read_text())
+    c = yaml.safe_load((ROOT/"courses/trainingint.yaml").read_text())
     assert c["site"] == "trainingint"
     course = c["courses"][0]
-    for k in ("id", "course_url", "pillar", "cluster", "secondary_courses"):
+    for k in ("id","course_url","pillar","cluster","secondary_courses"):
         assert k in course
-    assert course["cluster"][0]["status"] in ("idea", "proposed")
+    assert course["cluster"][0]["status"] in ("idea","proposed")
 ```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `python -m pytest tests/test_config.py -v`
-Expected: FAIL (files do not exist).
-
-- [ ] **Step 3: Create the config files**
+- [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_config.py -v` → FAIL.
+- [ ] **Step 3: Create files** —
 
 `config/sites.yaml`:
 ```yaml
@@ -154,33 +119,32 @@ sites:
   trainingint:
     base_url: https://www.trainingint.com
     wp_api_base: https://www.trainingint.com/wp-json/wp/v2
-    app_password_env: WP_TRAININGINT          # value in credentials/.env
-    cadence:
-      per_week: 5
-      days: [Mon, Tue, Wed, Thu, Fri]
-    link_budget:                              # trainingint as HOST (inverted vs softskills)
+    ae_api_base: https://www.trainingint.com/wp-json/ae/v1
+    app_password_env: WP_TRAININGINT
+    cadence: { per_week: 5, days: [Mon,Tue,Wed,Thu,Fri] }
+    link_budget:
       internal_sibling_min: 2
       internal_sibling_max: 3
-      primary_course_distinct: 1              # exactly one primary course URL
-      primary_course_occurrences_max: 3       # CTA top + bottom + <=1 contextual
+      primary_course_distinct: 1
+      primary_course_occurrences_max: 3
       secondary_course_max: 3
       authoritative_outbound_min: 1
       authoritative_outbound_max: 2
-    probe:                                    # filled by scripts/probe.py — do NOT hand-edit
+    probe:                       # filled by scripts/probe.py — do NOT hand-edit auto fields
       rest_ok: null
-      seo_plugin: null                        # yoast | rankmath | none
-      seo_meta_rest_writable: null            # true => direct; false => helper plugin (Task 14)
+      seo_plugin: null           # yoast | rankmath | none
+      seo_meta_rest_writable: null
       seo_plugin_emits_graph: null
-      html_renders_ok: null
-      default_category_id: null
-      default_author_id: null
+      uid_roundtrip_ok: null     # idempotency mechanism verified on live site
+      html_renders_ok: null      # manual (Task 15 Step 1)
+      wpcron_reliable: null       # manual
+      default_category_id: null   # manual
+      default_author_id: null     # manual
       media_max_bytes: null
-      wpcron_reliable: null
-      keyword_data: null                      # ubersuggest_csv | ai_only
+      keyword_data: null          # ubersuggest_csv | ai_only
       probed_at: null
 ```
-
-`courses/trainingint.yaml` (seed with one real course block; owner extends):
+`courses/trainingint.yaml`:
 ```yaml
 site: trainingint
 courses:
@@ -191,1142 +155,421 @@ courses:
       - https://www.trainingint.com/communicate-with-confidence
       - https://www.trainingint.com/business-presentation-skills-training-singapore
     cluster:
-      - slug: how-to-write-a-professional-email
-        primary_keyword: how to write a professional email
-        status: idea
-      - slug: how-to-write-a-follow-up-email
-        primary_keyword: how to write a follow up email
-        status: idea
-      - slug: how-to-write-a-formal-email-to-your-boss
-        primary_keyword: how to write a formal email to your boss
-        status: idea
-      - slug: how-to-write-an-apology-email-at-work
-        primary_keyword: how to write an apology email
-        status: idea
-      - slug: how-to-write-a-meeting-recap-email
-        primary_keyword: how to write a meeting recap email
-        status: idea
+      - { slug: how-to-write-a-professional-email, primary_keyword: how to write a professional email, status: idea }
+      - { slug: how-to-write-a-follow-up-email, primary_keyword: how to write a follow up email, status: idea }
+      - { slug: how-to-write-a-formal-email-to-your-boss, primary_keyword: how to write a formal email to your boss, status: idea }
+      - { slug: how-to-write-an-apology-email-at-work, primary_keyword: how to write an apology email, status: idea }
+      - { slug: how-to-write-a-meeting-recap-email, primary_keyword: how to write a meeting recap email, status: idea }
 ```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `python -m pytest tests/test_config.py -v`
-Expected: PASS (both tests).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add config/ courses/ tests/test_config.py && git commit -m "feat: site registry + trainingint course spine"
-```
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_config.py -v` → PASS.
+- [ ] **Step 5: Commit** — `git add config/ courses/ tests/test_config.py && git commit -m "feat: site registry + course spine"`
 
 ---
 
-### Task 3: Vendor voice/ + seo/ DATA from softskills
+### Task 3: Vendor voice/ + seo/ DATA
 
-**Files:**
-- Create: `voice/{voice,humor,opinions,stats,stories,do-not-write}.md` (copied), `voice/sync.md`
-- Create: `seo/{checklist.md,link-budget.md,schema-templates.md,audit-budgets.yaml,pillar-map.yaml}` (copied), `seo/sync.md`
-- Create: `tests/test_vendored_data.py`
+**Files:** Create `voice/*.md` (6) + `voice/sync.md`, `seo/*` (5) + `seo/sync.md`, `tests/test_vendored_data.py`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/test_vendored_data.py`:
+- [ ] **Step 1: Failing test** — `tests/test_vendored_data.py`:
 ```python
 import pathlib
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-VOICE = ["voice.md","humor.md","opinions.md","stats.md","stories.md","do-not-write.md"]
-SEO = ["checklist.md","link-budget.md","schema-templates.md","audit-budgets.yaml","pillar-map.yaml"]
-
-def test_voice_files_present_nonempty():
-    for f in VOICE:
-        p = ROOT / "voice" / f
-        assert p.exists() and p.stat().st_size > 100, f
-    assert "24 years" in (ROOT / "voice/stats.md").read_text(encoding="utf-8")
-
-def test_seo_files_present_nonempty():
-    for f in SEO:
-        p = ROOT / "seo" / f
-        assert p.exists() and p.stat().st_size > 100, f
-    assert "Refuse-to-publish" in (ROOT / "seo/link-budget.md").read_text(encoding="utf-8")
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+V=["voice.md","humor.md","opinions.md","stats.md","stories.md","do-not-write.md"]
+S=["checklist.md","link-budget.md","schema-templates.md","audit-budgets.yaml","pillar-map.yaml"]
+def test_voice_present():
+    for f in V:
+        p=ROOT/"voice"/f; assert p.exists() and p.stat().st_size>100, f
+    assert "24 years" in (ROOT/"voice/stats.md").read_text(encoding="utf-8")
+def test_seo_present():
+    for f in S:
+        p=ROOT/"seo"/f; assert p.exists() and p.stat().st_size>100, f
+    assert "Refuse-to-publish" in (ROOT/"seo/link-budget.md").read_text(encoding="utf-8")
 ```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `python -m pytest tests/test_vendored_data.py -v`
-Expected: FAIL (files not copied yet).
-
-- [ ] **Step 3: Copy the verified source files**
-
-Source (verified to exist 2026-05-19): `D:/vp/softskills/1-NEW-SSKILLS/`. Run:
+- [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_vendored_data.py -v` → FAIL.
+- [ ] **Step 3: Copy verified sources** (audit-confirmed present 2026-05-19):
 ```bash
-cd D:/VP/ARTICLE_ENGINE
-mkdir -p voice seo
+cd D:/VP/ARTICLE_ENGINE && mkdir -p voice seo
 cp "D:/vp/softskills/1-NEW-SSKILLS/voice/"{voice,humor,opinions,stats,stories,do-not-write}.md voice/
 cp "D:/vp/softskills/1-NEW-SSKILLS/seo/"{checklist.md,link-budget.md,schema-templates.md,audit-budgets.yaml,pillar-map.yaml} seo/
 ```
-
 `voice/sync.md`:
 ```markdown
 # Voice DATA provenance
 Vendored 2026-05-19 from D:/vp/softskills/1-NEW-SSKILLS/voice/ (6 files).
-These are softskills' LOCKED voice rules — stats.md facts are verbatim, never paraphrased.
-To resync: re-copy the 6 files; diff before overwriting; never edit here without
-updating the softskills source too (single source of truth lives in softskills).
+softskills' LOCKED voice rules — stats.md facts verbatim, never paraphrased.
+Resync = re-copy 6 files; diff before overwrite; softskills is the source of truth.
 ```
-
 `seo/sync.md`:
 ```markdown
 # SEO DATA provenance
 Vendored 2026-05-19 from D:/vp/softskills/1-NEW-SSKILLS/seo/.
-link-budget.md is softskills.sg-centric; the trainingint link budget is
-re-expressed numerically in config/sites.yaml -> sites.trainingint.link_budget
-and enforced by scripts/lib/link_budget.py. checklist.md (80 items) is used as-is
-by /ae-6-seo-pass. pillar-map.yaml is reference topology only; the live topic
-queue is courses/<site>.yaml.
+link-budget.md is softskills.sg-centric; the trainingint budget is the numeric
+block in config/sites.yaml -> sites.trainingint.link_budget, enforced by
+scripts/lib/link_budget.py. checklist.md (80 items) used as-is by /ae-6.
+pillar-map.yaml is reference topology only; live queue = courses/<site>.yaml.
 ```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `python -m pytest tests/test_vendored_data.py -v`
-Expected: PASS. If `test_voice_files_present_nonempty` fails on the `"24 years"` assertion, the wrong file was copied — re-verify the source path.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add voice/ seo/ tests/test_vendored_data.py && git commit -m "feat: vendor softskills voice + SEO DATA (provenance documented)"
-```
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_vendored_data.py -v` → PASS. If the `"24 years"` assert fails, wrong source copied — re-check the path.
+- [ ] **Step 5: Commit** — `git add voice/ seo/ tests/test_vendored_data.py && git commit -m "feat: vendor softskills voice + SEO DATA"`
 
 ---
 
-## Phase P1 — Pure gate libraries (TDD + adversarial)
+### Task 4: `scripts/lib/ngram.py`
 
-> Per superpowers-extras: plan code is unvalidated code. Each lib ships an **adversarial test** — a no-op/buggy implementation MUST fail it.
+**Files:** Create `scripts/lib/ngram.py`, `tests/test_ngram.py`
 
-### Task 4: `scripts/lib/ngram.py` — 8-word shingle overlap
-
-**Files:**
-- Create: `scripts/lib/ngram.py`
-- Create: `tests/test_ngram.py`
-
-- [ ] **Step 1: Write the failing tests (incl. adversarial)**
-
-`tests/test_ngram.py`:
+- [ ] **Step 1: Failing tests (incl. adversarial)** — `tests/test_ngram.py`:
 ```python
 from scripts.lib.ngram import shingles, overlap_8gram, voice_survival_ratio
-
-def test_shingles_basic():
-    assert ("the quick brown fox jumps over the lazy",) [0] in \
-        {" ".join(s) for s in shingles("the quick brown fox jumps over the lazy dog", 8)}
-
+def test_shingles_count():
+    assert len(shingles("a b c d e f g h i", 8)) == 2
 def test_overlap_detects_shared_phrase():
-    a = "you should always proofread your email before you hit send today"
-    b = "experts say you should always proofread your email before you hit send"
-    hits = overlap_8gram(a, b)
-    assert any("proofread your email before you hit send" in h for h in hits)
-
-# ADVERSARIAL: a no-op overlap (returns []) MUST fail this.
-def test_overlap_no_op_implementation_fails():
-    a = "alpha beta gamma delta epsilon zeta eta theta iota kappa"
-    b = "alpha beta gamma delta epsilon zeta eta theta iota kappa"
-    assert overlap_8gram(a, b), "identical text must report >=1 shared 8-gram"
-
-def test_voice_survival_ratio():
-    voice = "one two three four five six seven eight nine ten eleven twelve"
-    seo = voice  # unchanged prose
-    assert voice_survival_ratio(seo, voice) == 1.0
-    # ADVERSARIAL: a stub returning 1.0 must fail when prose is gutted
-    assert voice_survival_ratio("completely different words entirely none shared at all here now", voice) < 0.85
+    a="you should always proofread your email before you hit send today"
+    b="experts say you should always proofread your email before you hit send"
+    assert any("proofread your email before you hit send" in h for h in overlap_8gram(a,b))
+def test_overlap_no_op_implementation_fails():     # ADVERSARIAL: return [] fails this
+    t="alpha beta gamma delta epsilon zeta eta theta iota kappa"
+    assert overlap_8gram(t,t)
+def test_voice_survival():
+    v="one two three four five six seven eight nine ten eleven twelve"
+    assert voice_survival_ratio(v,v) == 1.0
+    assert voice_survival_ratio("completely different words none shared at all here now then",v) < 0.85
 ```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_ngram.py -v`
-Expected: FAIL (module missing).
-
-- [ ] **Step 3: Implement**
-
-`scripts/lib/ngram.py`:
+- [ ] **Step 2: Run, verify fail** — `python -m pytest tests/test_ngram.py -v` → FAIL.
+- [ ] **Step 3: Implement** — `scripts/lib/ngram.py`:
 ```python
 import re
-
-def _norm(text: str) -> list[str]:
-    return re.findall(r"[a-z0-9]+", text.lower())
-
-def shingles(text: str, n: int = 8) -> list[tuple[str, ...]]:
-    w = _norm(text)
-    return [tuple(w[i:i + n]) for i in range(len(w) - n + 1)] if len(w) >= n else []
-
-def overlap_8gram(a: str, b: str, n: int = 8) -> list[str]:
-    sb = {s for s in shingles(b, n)}
-    return [" ".join(s) for s in shingles(a, n) if s in sb]
-
-def voice_survival_ratio(seo_text: str, voice_text: str, n: int = 8) -> float:
-    """Fraction of the voice draft's 8-grams that survive into the SEO draft."""
-    vs = shingles(voice_text, n)
-    if not vs:
-        return 1.0
-    se = {s for s in shingles(seo_text, n)}
-    return sum(1 for s in vs if s in se) / len(vs)
+def _norm(t): return re.findall(r"[a-z0-9]+", t.lower())
+def shingles(text, n=8):
+    w=_norm(text)
+    return [tuple(w[i:i+n]) for i in range(len(w)-n+1)] if len(w)>=n else []
+def overlap_8gram(a,b,n=8):
+    sb={s for s in shingles(b,n)}
+    return [" ".join(s) for s in shingles(a,n) if s in sb]
+def voice_survival_ratio(seo_text, voice_text, n=8):
+    vs=shingles(voice_text,n)
+    if not vs: return 1.0
+    se={s for s in shingles(seo_text,n)}
+    return sum(1 for s in vs if s in se)/len(vs)
 ```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_ngram.py -v`
-Expected: PASS (4 tests, including both adversarial).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/lib/ngram.py tests/test_ngram.py && git commit -m "feat: 8-gram overlap + voice-survival gate (adversarial-tested)"
-```
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_ngram.py -v` → PASS (4).
+- [ ] **Step 5: Commit** — `git add scripts/lib/ngram.py tests/test_ngram.py && git commit -m "feat: 8-gram overlap + voice-survival (adversarial-tested)"`
 
 ---
 
-### Task 5: `scripts/lib/originality.py` — ≥2-of-4 gate
+### Task 5: `scripts/lib/originality.py`
 
-**Files:**
-- Create: `scripts/lib/originality.py`
-- Create: `tests/test_originality.py`
+**Files:** Create `scripts/lib/originality.py`, `tests/test_originality.py`
 
-- [ ] **Step 1: Write the failing tests (incl. adversarial)**
-
-`tests/test_originality.py`:
+- [ ] **Step 1: Failing tests (incl. adversarial)** — `tests/test_originality.py`:
 ```python
 from scripts.lib.originality import originality_report
-
-STORIES = "A trainee once emailed the whole company by mistake. We laughed, then fixed it."
-STATS = "24 years training in Singapore. 48,000+ working professionals trained."
-
-def test_passes_with_story_and_stat():
-    article = ("Here is a real case: A trainee once emailed the whole company by "
-               "mistake. We laughed, then fixed it. Note we have 24 years training "
-               "in Singapore behind this advice.")
-    r = originality_report(article, stories_md=STORIES, stats_md=STATS,
-                           serp_bodies=["generic competitor text about emails"])
-    assert r["passes"] is True and r["count"] >= 2
-
-def test_fails_with_zero_elements():
-    article = "Generic advice about writing emails that competitors also say."
-    r = originality_report(article, stories_md=STORIES, stats_md=STATS,
-                           serp_bodies=["Generic advice about writing emails that competitors also say."])
-    assert r["passes"] is False and r["count"] == 0
-
-# ADVERSARIAL: a stub returning {"passes": True} unconditionally MUST fail this.
-def test_no_op_pass_stub_fails():
-    article = "nothing original here at all just filler words repeated repeated"
-    r = originality_report(article, stories_md=STORIES, stats_md=STATS,
-                           serp_bodies=[article])
-    assert r["passes"] is False
+STORIES="A trainee once emailed the whole company by mistake. We laughed, then fixed it."
+STATS="24 years training in Singapore. 48,000+ working professionals trained."
+def test_passes_story_and_stat():
+    art=("Real case: A trainee once emailed the whole company by mistake. We "
+         "laughed, then fixed it. We have 24 years training in Singapore behind this.")
+    r=originality_report(art, STORIES, STATS, ["generic competitor copy about emails"])
+    assert r["passes"] and r["count"]>=2
+def test_fails_zero_elements():
+    art="Generic advice about writing emails that competitors also say."
+    r=originality_report(art, STORIES, STATS, [art])
+    assert not r["passes"] and r["count"]==0
+def test_no_op_pass_stub_fails():     # ADVERSARIAL: {"passes":True} stub fails this
+    art="nothing original here at all just filler words repeated repeated"
+    r=originality_report(art, STORIES, STATS, [art])
+    assert not r["passes"]
 ```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_originality.py -v`
-Expected: FAIL (module missing).
-
-- [ ] **Step 3: Implement**
-
-`scripts/lib/originality.py`:
+- [ ] **Step 2: Run, verify fail** — FAIL.
+- [ ] **Step 3: Implement** — `scripts/lib/originality.py`:
 ```python
+import re
 from scripts.lib.ngram import overlap_8gram
-
-def _has_story(article: str, stories_md: str) -> bool:
-    for line in (l.strip(" -*") for l in stories_md.splitlines()):
-        if len(line) > 30 and line[:30].lower() in article.lower():
-            return True
+def _has_story(a, stories):
+    for ln in (l.strip(" -*") for l in stories.splitlines()):
+        if len(ln)>30 and ln[:30].lower() in a.lower(): return True
     return False
-
-def _has_stat(article: str, stats_md: str) -> bool:
-    for line in (l.strip(" -*") for l in stats_md.splitlines()):
-        frag = line.split(".")[0].strip()
-        if len(frag) > 6 and frag.lower() in article.lower():
-            return True
+def _has_stat(a, stats):
+    for ln in (l.strip(" -*") for l in stats.splitlines()):
+        frag=ln.split(".")[0].strip()
+        if len(frag)>6 and frag.lower() in a.lower(): return True
     return False
-
-def _has_original_analogy(article: str, serp_bodies: list[str]) -> bool:
-    cues = ("like ", "is like", "think of it as", "imagine ", "as if ")
-    for sent in article.replace("\n", " ").split("."):
-        if any(c in sent.lower() for c in cues):
-            if not any(overlap_8gram(sent, body) for body in serp_bodies):
-                return True
+def _has_analogy(a, serp):
+    for s in a.replace("\n"," ").split("."):
+        if any(c in s.lower() for c in ("like ","is like","think of it as","imagine ","as if ")):
+            if not any(overlap_8gram(s,b) for b in serp): return True
     return False
-
-def _has_framework(article: str, serp_bodies: list[str]) -> bool:
-    import re
-    if re.search(r"(?m)^\s*(\d+\.|\-|\*)\s+\S", article):
-        block = "\n".join(l for l in article.splitlines()
-                          if re.match(r"\s*(\d+\.|\-|\*)\s+\S", l))
-        return bool(block) and not any(overlap_8gram(block, b) for b in serp_bodies)
+def _has_framework(a, serp):
+    if re.search(r"(?m)^\s*(\d+\.|\-|\*)\s+\S", a):
+        block="\n".join(l for l in a.splitlines() if re.match(r"\s*(\d+\.|\-|\*)\s+\S", l))
+        return bool(block) and not any(overlap_8gram(block,b) for b in serp)
     return False
-
-def originality_report(article: str, stories_md: str, stats_md: str,
-                       serp_bodies: list[str]) -> dict:
-    checks = {
-        "story": _has_story(article, stories_md),
-        "stat": _has_stat(article, stats_md),
-        "original_analogy": _has_original_analogy(article, serp_bodies),
-        "original_framework": _has_framework(article, serp_bodies),
-    }
-    count = sum(checks.values())
-    return {"passes": count >= 2, "count": count, "checks": checks}
+def originality_report(article, stories_md, stats_md, serp_bodies):
+    c={"story":_has_story(article,stories_md),"stat":_has_stat(article,stats_md),
+       "original_analogy":_has_analogy(article,serp_bodies),
+       "original_framework":_has_framework(article,serp_bodies)}
+    n=sum(c.values())
+    return {"passes": n>=2, "count": n, "checks": c}
 ```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_originality.py -v`
-Expected: PASS (3 tests).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/lib/originality.py tests/test_originality.py && git commit -m "feat: >=2-of-4 originality gate (adversarial-tested)"
-```
+- [ ] **Step 4: Run, verify pass** — PASS (3).
+- [ ] **Step 5: Commit** — `git add scripts/lib/originality.py tests/test_originality.py && git commit -m "feat: >=2-of-4 originality gate (adversarial-tested)"`
 
 ---
 
-### Task 6: `scripts/lib/link_budget.py` — per-site link-budget validator
+### Task 6: `scripts/lib/link_budget.py`
 
-Ported from the rules in `D:/vp/softskills/1-NEW-SSKILLS/seo/link-budget.md` (read verbatim 2026-05-19), inverted for trainingint-as-host and parameterised by `config/sites.yaml`'s `link_budget` block.
+Ported from rules in `D:/vp/softskills/1-NEW-SSKILLS/seo/link-budget.md` (audit-confirmed), parameterised by `config/sites.yaml`.
 
-**Files:**
-- Create: `scripts/lib/link_budget.py`
-- Create: `tests/test_link_budget.py`
+**Files:** Create `scripts/lib/link_budget.py`, `tests/test_link_budget.py`
 
-- [ ] **Step 1: Write the failing tests (incl. adversarial)**
-
-`tests/test_link_budget.py`:
+- [ ] **Step 1: Failing tests (incl. adversarial)** — `tests/test_link_budget.py`:
 ```python
 from scripts.lib.link_budget import validate_links
-
-BUDGET = {  # mirrors config/sites.yaml sites.trainingint.link_budget
-    "internal_sibling_min": 2, "internal_sibling_max": 3,
-    "primary_course_distinct": 1, "primary_course_occurrences_max": 3,
-    "secondary_course_max": 3,
-    "authoritative_outbound_min": 1, "authoritative_outbound_max": 2,
-}
-
-def _links(**kw):
-    return kw  # convenience
-
-def test_clean_inventory_passes():
-    inv = {
-        "internal_sibling": ["/blog/a", "/blog/b"],
-        "primary_course": ["https://www.trainingint.com/x",
-                           "https://www.trainingint.com/x",
-                           "https://www.trainingint.com/x"],
-        "secondary_course": ["https://www.trainingint.com/y"],
-        "authoritative_outbound": ["https://www.skillsfuture.gov.sg/"],
-        "anchors": ["write better emails", "the email course", "follow-up guide",
-                    "SkillsFuture", "communicate course"],
-        "same_paragraph_domains": [],
-    }
-    assert validate_links(inv, BUDGET) == []
-
-# ADVERSARIAL: a stub returning [] (no violations) MUST fail here.
-def test_too_many_primary_course_occurrences_is_violation():
-    inv = {
-        "internal_sibling": ["/blog/a", "/blog/b"],
-        "primary_course": ["https://www.trainingint.com/x"] * 5,   # 5 > max 3
-        "secondary_course": [],
-        "authoritative_outbound": ["https://mom.gov.sg"],
-        "anchors": ["a", "b", "c", "d", "e", "f", "g"],
-        "same_paragraph_domains": [],
-    }
-    v = validate_links(inv, BUDGET)
-    assert any("primary_course_occurrences" in x for x in v)
-
-def test_orphan_and_eeat_failures():
-    inv = {"internal_sibling": [], "primary_course": ["u"],
-           "secondary_course": [], "authoritative_outbound": [],
-           "anchors": ["x"], "same_paragraph_domains": []}
-    v = validate_links(inv, BUDGET)
+B={"internal_sibling_min":2,"internal_sibling_max":3,"primary_course_distinct":1,
+   "primary_course_occurrences_max":3,"secondary_course_max":3,
+   "authoritative_outbound_min":1,"authoritative_outbound_max":2}
+def test_clean_passes():
+    inv={"internal_sibling":["/blog/a","/blog/b"],
+         "primary_course":["u","u","u"],"secondary_course":["y"],
+         "authoritative_outbound":["https://www.skillsfuture.gov.sg/"],
+         "anchors":["a1","a2","a3","a4","a5"],"same_paragraph_domains":[]}
+    assert validate_links(inv,B)==[]
+def test_too_many_primary_occurrences():   # ADVERSARIAL: return [] stub fails
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"]*5,
+         "secondary_course":[],"authoritative_outbound":["https://mom.gov.sg"],
+         "anchors":["a","b","c","d","e","f","g"],"same_paragraph_domains":[]}
+    assert any("primary_course_occurrences" in x for x in validate_links(inv,B))
+def test_orphan_and_eeat():
+    inv={"internal_sibling":[],"primary_course":["u"],"secondary_course":[],
+         "authoritative_outbound":[],"anchors":["x"],"same_paragraph_domains":[]}
+    v=validate_links(inv,B)
     assert any("internal_sibling_min" in x for x in v)
     assert any("authoritative_outbound_min" in x for x in v)
-
-def test_duplicate_anchor_and_same_paragraph_spam():
-    inv = {"internal_sibling": ["/a", "/b"], "primary_course": ["u"],
-           "secondary_course": [], "authoritative_outbound": ["https://hbr.org"],
-           "anchors": ["same", "same"], "same_paragraph_domains": ["trainingint.com"]}
-    v = validate_links(inv, BUDGET)
+def test_dup_anchor_and_spam():
+    inv={"internal_sibling":["/a","/b"],"primary_course":["u"],"secondary_course":[],
+         "authoritative_outbound":["https://hbr.org"],"anchors":["same","same"],
+         "same_paragraph_domains":["trainingint.com"]}
+    v=validate_links(inv,B)
     assert any("identical_anchor" in x for x in v)
     assert any("same_paragraph" in x for x in v)
 ```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_link_budget.py -v`
-Expected: FAIL (module missing).
-
-- [ ] **Step 3: Implement**
-
-`scripts/lib/link_budget.py`:
+- [ ] **Step 2: Run, verify fail** — FAIL.
+- [ ] **Step 3: Implement** — `scripts/lib/link_budget.py`:
 ```python
-def validate_links(inv: dict, budget: dict) -> list[str]:
-    """Return a list of violation codes. Empty list = passes.
-    inv keys: internal_sibling[], primary_course[] (one per occurrence),
-    secondary_course[], authoritative_outbound[], anchors[],
-    same_paragraph_domains[] (domains appearing >1x in one paragraph)."""
-    v = []
-    sib = inv["internal_sibling"]
-    if len(sib) < budget["internal_sibling_min"]:
+def validate_links(inv, budget):
+    v=[]
+    sib=inv["internal_sibling"]
+    if len(sib)<budget["internal_sibling_min"]:
         v.append(f"internal_sibling_min: {len(sib)} < {budget['internal_sibling_min']}")
-    if len(sib) > budget["internal_sibling_max"]:
+    if len(sib)>budget["internal_sibling_max"]:
         v.append(f"internal_sibling_max: {len(sib)} > {budget['internal_sibling_max']}")
-
-    pc = inv["primary_course"]
-    if len(set(pc)) > budget["primary_course_distinct"]:
-        v.append(f"primary_course_distinct: {len(set(pc))} distinct > "
-                 f"{budget['primary_course_distinct']}")
-    if len(pc) > budget["primary_course_occurrences_max"]:
-        v.append(f"primary_course_occurrences: {len(pc)} > "
-                 f"{budget['primary_course_occurrences_max']}")
-
-    if len(inv["secondary_course"]) > budget["secondary_course_max"]:
-        v.append(f"secondary_course_max: {len(inv['secondary_course'])} > "
-                 f"{budget['secondary_course_max']}")
-
-    ao = inv["authoritative_outbound"]
-    if len(ao) < budget["authoritative_outbound_min"]:
-        v.append(f"authoritative_outbound_min: {len(ao)} < "
-                 f"{budget['authoritative_outbound_min']}")
-    if len(ao) > budget["authoritative_outbound_max"]:
-        v.append(f"authoritative_outbound_max: {len(ao)} > "
-                 f"{budget['authoritative_outbound_max']}")
-
-    anchors = [a.strip().lower() for a in inv["anchors"]]
-    if len(anchors) != len(set(anchors)):
-        v.append("identical_anchor: two or more link anchors are identical")
-    banned = {"click here", "learn more", "read more", "here"}
-    if any(a in banned for a in anchors):
-        v.append("banned_anchor: generic anchor text present")
-
+    pc=inv["primary_course"]
+    if len(set(pc))>budget["primary_course_distinct"]:
+        v.append(f"primary_course_distinct: {len(set(pc))} > {budget['primary_course_distinct']}")
+    if len(pc)>budget["primary_course_occurrences_max"]:
+        v.append(f"primary_course_occurrences: {len(pc)} > {budget['primary_course_occurrences_max']}")
+    if len(inv["secondary_course"])>budget["secondary_course_max"]:
+        v.append(f"secondary_course_max: {len(inv['secondary_course'])} > {budget['secondary_course_max']}")
+    ao=inv["authoritative_outbound"]
+    if len(ao)<budget["authoritative_outbound_min"]:
+        v.append(f"authoritative_outbound_min: {len(ao)} < {budget['authoritative_outbound_min']}")
+    if len(ao)>budget["authoritative_outbound_max"]:
+        v.append(f"authoritative_outbound_max: {len(ao)} > {budget['authoritative_outbound_max']}")
+    anchors=[a.strip().lower() for a in inv["anchors"]]
+    if len(anchors)!=len(set(anchors)):
+        v.append("identical_anchor: two or more anchors identical")
+    if any(a in {"click here","learn more","read more","here"} for a in anchors):
+        v.append("banned_anchor: generic anchor present")
     if inv["same_paragraph_domains"]:
-        v.append(f"same_paragraph: domain repeated in one paragraph "
-                 f"({inv['same_paragraph_domains']})")
+        v.append(f"same_paragraph: domain repeated in one paragraph ({inv['same_paragraph_domains']})")
     return v
 ```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_link_budget.py -v`
-Expected: PASS (4 tests).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/lib/link_budget.py tests/test_link_budget.py && git commit -m "feat: per-site link-budget validator (ported from softskills rules, adversarial-tested)"
-```
+- [ ] **Step 4: Run, verify pass** — PASS (4).
+- [ ] **Step 5: Commit** — `git add scripts/lib/link_budget.py tests/test_link_budget.py && git commit -m "feat: per-site link-budget validator (adversarial-tested)"`
 
 ---
 
-### Task 7: `scripts/lib/jsonld.py` — schema builder
+### Task 7: `scripts/lib/jsonld.py` (with real adversarial test — audit M8)
 
-Shapes verified against `D:/vp/softskills/1-NEW-SSKILLS/seo/schema-templates.md` (Article + FAQPage + BreadcrumbList).
+Shapes verified vs `D:/vp/softskills/1-NEW-SSKILLS/seo/schema-templates.md`.
 
-**Files:**
-- Create: `scripts/lib/jsonld.py`
-- Create: `tests/test_jsonld.py`
+**Files:** Create `scripts/lib/jsonld.py`, `tests/test_jsonld.py`
 
-- [ ] **Step 1: Write the failing tests**
-
-`tests/test_jsonld.py`:
+- [ ] **Step 1: Failing tests (incl. adversarial — a hardcoded-3-node stub must fail)** — `tests/test_jsonld.py`:
 ```python
 import json
 from scripts.lib.jsonld import build_jsonld
-
-def test_emits_three_graph_nodes():
-    blocks = build_jsonld(
-        url="https://www.trainingint.com/blog/how-to-write-a-professional-email/",
-        title="How to Write a Professional Email",
-        description="A practical guide.",
-        author="Vinai Prakash",
-        publisher="Intellisoft Training Pte Ltd",
-        faqs=[{"q": "Q1?", "a": "A1."}],
-        breadcrumb=[("Home", "https://www.trainingint.com/"),
-                    ("Blog", "https://www.trainingint.com/blog/"),
-                    ("How to Write a Professional Email",
-                     "https://www.trainingint.com/blog/how-to-write-a-professional-email/")],
-    )
-    types = {b["@type"] for b in json.loads(blocks)["@graph"]}
-    assert {"Article", "FAQPage", "BreadcrumbList"} <= types
-
-def test_faqpage_skipped_when_plugin_emits_graph():
-    blocks = build_jsonld(url="u", title="t", description="d", author="a",
-                          publisher="p", faqs=[{"q": "x", "a": "y"}],
-                          breadcrumb=[("Home", "u")], suppress={"FAQPage"})
-    types = {b["@type"] for b in json.loads(blocks)["@graph"]}
+def _b(**kw):
+    base=dict(url="https://t/x/", title="How to X", description="d",
+              author="Vinai Prakash", publisher="Intellisoft Training Pte Ltd",
+              faqs=[{"q":"Q1?","a":"A1."}],
+              breadcrumb=[("Home","https://t/"),("Blog","https://t/blog/"),
+                          ("How to X","https://t/x/")])
+    base.update(kw); return json.loads(build_jsonld(**base))
+def test_three_nodes_and_content():
+    g=_b()["@graph"]
+    by={n["@type"]:n for n in g}
+    assert {"Article","FAQPage","BreadcrumbList"} <= set(by)
+    assert by["Article"]["headline"]=="How to X"          # content, not just count
+    assert [i["position"] for i in by["BreadcrumbList"]["itemListElement"]]==[1,2,3]
+    assert by["FAQPage"]["mainEntity"][0]["name"]=="Q1?"
+def test_suppress_skips_node():   # ADVERSARIAL: a stub that ignores suppress fails
+    types={n["@type"] for n in _b(suppress={"FAQPage"})["@graph"]}
     assert "FAQPage" not in types and "Article" in types
 ```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_jsonld.py -v`
-Expected: FAIL (module missing).
-
-- [ ] **Step 3: Implement**
-
-`scripts/lib/jsonld.py`:
+- [ ] **Step 2: Run, verify fail** — FAIL.
+- [ ] **Step 3: Implement** — `scripts/lib/jsonld.py`:
 ```python
 import json
-
-def build_jsonld(url, title, description, author, publisher,
-                  faqs, breadcrumb, suppress: set | None = None) -> str:
-    suppress = suppress or set()
-    graph = []
+def build_jsonld(url,title,description,author,publisher,faqs,breadcrumb,suppress=None):
+    suppress=suppress or set(); g=[]
     if "Article" not in suppress:
-        graph.append({
-            "@type": "Article", "headline": title, "description": description,
-            "mainEntityOfPage": url,
-            "author": {"@type": "Person", "name": author},
-            "publisher": {"@type": "Organization", "name": publisher},
-        })
+        g.append({"@type":"Article","headline":title,"description":description,
+                  "mainEntityOfPage":url,
+                  "author":{"@type":"Person","name":author},
+                  "publisher":{"@type":"Organization","name":publisher}})
     if "FAQPage" not in suppress and faqs:
-        graph.append({
-            "@type": "FAQPage",
-            "mainEntity": [{
-                "@type": "Question", "name": f["q"],
-                "acceptedAnswer": {"@type": "Answer", "text": f["a"]},
-            } for f in faqs],
-        })
+        g.append({"@type":"FAQPage","mainEntity":[
+            {"@type":"Question","name":f["q"],
+             "acceptedAnswer":{"@type":"Answer","text":f["a"]}} for f in faqs]})
     if "BreadcrumbList" not in suppress and breadcrumb:
-        graph.append({
-            "@type": "BreadcrumbList",
-            "itemListElement": [{
-                "@type": "ListItem", "position": i + 1, "name": n, "item": u
-            } for i, (n, u) in enumerate(breadcrumb)],
-        })
-    return json.dumps({"@context": "https://schema.org", "@graph": graph})
+        g.append({"@type":"BreadcrumbList","itemListElement":[
+            {"@type":"ListItem","position":i+1,"name":n,"item":u}
+            for i,(n,u) in enumerate(breadcrumb)]})
+    return json.dumps({"@context":"https://schema.org","@graph":g})
 ```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_jsonld.py -v` then full suite `python -m pytest -v`
-Expected: PASS; `tests/test_scaffold.py::test_libs_importable` now also PASSES (all four libs exist).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/lib/jsonld.py tests/test_jsonld.py && git commit -m "feat: JSON-LD builder with plugin-graph suppression"
-```
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_jsonld.py tests/test_scaffold.py -v` → PASS (incl. `test_libs_importable` now green).
+- [ ] **Step 5: Commit** — `git add scripts/lib/jsonld.py tests/test_jsonld.py && git commit -m "feat: JSON-LD builder (content + suppress adversarial-tested)"`
 
 ---
 
-## Phase P0 (cont.) — WP client + probe
+### Task 8: `scripts/lib/wp_client.py` (uid lookup via `/ae/v1/find` — audit M3)
 
-### Task 8: `scripts/lib/wp_client.py` — thin WP REST client
+**Files:** Create `scripts/lib/wp_client.py`, `tests/test_wp_client.py`
 
-**Files:**
-- Create: `scripts/lib/wp_client.py`
-- Create: `tests/test_wp_client.py`
-
-- [ ] **Step 1: Write the failing tests (mocked REST)**
-
-`tests/test_wp_client.py`:
+- [ ] **Step 1: Failing tests** — `tests/test_wp_client.py`:
 ```python
 import responses
 from scripts.lib.wp_client import WPClient
-
-BASE = "https://www.trainingint.com/wp-json/wp/v2"
-
+WP="https://www.trainingint.com/wp-json/wp/v2"
+AE="https://www.trainingint.com/wp-json/ae/v1"
+def c(): return WPClient(WP,"u","p")
 @responses.activate
-def test_find_post_by_uid_returns_id_or_none():
-    responses.get(f"{BASE}/posts", json=[{"id": 42}], status=200)
-    c = WPClient(BASE, "user", "app pass")
-    assert c.find_post_by_uid("abc123") == 42
-
+def test_find_uid_returns_id():
+    responses.get(f"{AE}/find", json={"id":42}, status=200)
+    assert c().find_post_by_uid("abc")==42
 @responses.activate
-def test_find_post_by_uid_none_when_empty():
-    responses.get(f"{BASE}/posts", json=[], status=200)
-    c = WPClient(BASE, "user", "app pass")
-    assert c.find_post_by_uid("zzz") is None
-
+def test_find_uid_404_is_none():
+    responses.get(f"{AE}/find", status=404)
+    assert c().find_post_by_uid("zzz") is None
 @responses.activate
-def test_create_post_returns_id():
-    responses.post(f"{BASE}/posts", json={"id": 99}, status=201)
-    c = WPClient(BASE, "user", "app pass")
-    assert c.create_post({"title": "t", "status": "draft"}) == 99
+def test_find_slug_none_when_empty():
+    responses.get(f"{WP}/posts", json=[], status=200)
+    assert c().find_post_by_slug("x") is None
+@responses.activate
+def test_create_returns_id():
+    responses.post(f"{WP}/posts", json={"id":99}, status=201)
+    assert c().create_post({"title":"t","status":"draft"})==99
 ```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_wp_client.py -v`
-Expected: FAIL (module missing).
-
-- [ ] **Step 3: Implement**
-
-`scripts/lib/wp_client.py`:
+- [ ] **Step 2: Run, verify fail** — FAIL.
+- [ ] **Step 3: Implement** — `scripts/lib/wp_client.py`:
 ```python
 import requests
 from requests.auth import HTTPBasicAuth
-
-UID_META = "ae_content_uid"
-
+UID_META="ae_content_uid"
 class WPClient:
-    def __init__(self, api_base: str, user: str, app_password: str, timeout: int = 30):
-        self.base = api_base.rstrip("/")
-        self.auth = HTTPBasicAuth(user, app_password)
-        self.timeout = timeout
-
-    def _get(self, path, **params):
-        r = requests.get(f"{self.base}{path}", params=params,
-                         auth=self.auth, timeout=self.timeout)
-        r.raise_for_status()
-        return r.json()
-
-    def me(self) -> dict:
-        return self._get("/users/me")
-
-    def find_post_by_uid(self, uid: str):
-        # meta_key search requires the meta be registered/searchable; fall back to slug.
-        res = self._get("/posts", **{"meta_key": UID_META, "meta_value": uid,
-                                     "status": "any", "per_page": 1})
-        if res:
-            return res[0]["id"]
-        return None
-
-    def find_post_by_slug(self, slug: str):
-        res = self._get("/posts", slug=slug, status="any", per_page=1)
+    def __init__(self, api_base, user, app_password, timeout=30):
+        self.base=api_base.rstrip("/")
+        self.ae_base=self.base.replace("/wp/v2","/ae/v1")
+        self.auth=HTTPBasicAuth(user, app_password); self.timeout=timeout
+    def _get(self,path,**p):
+        r=requests.get(f"{self.base}{path}",params=p,auth=self.auth,timeout=self.timeout)
+        r.raise_for_status(); return r.json()
+    def me(self): return self._get("/users/me")
+    def find_post_by_uid(self, uid):
+        r=requests.get(f"{self.ae_base}/find",params={"uid":uid},
+                        auth=self.auth,timeout=self.timeout)
+        if r.status_code==404: return None
+        r.raise_for_status(); return r.json().get("id")
+    def find_post_by_slug(self, slug):
+        res=self._get("/posts",slug=slug,status="any",per_page=1)
         return res[0]["id"] if res else None
-
-    def create_post(self, payload: dict) -> int:
-        r = requests.post(f"{self.base}/posts", json=payload,
-                          auth=self.auth, timeout=self.timeout)
-        r.raise_for_status()
-        return r.json()["id"]
-
-    def update_post(self, post_id: int, payload: dict) -> int:
-        r = requests.post(f"{self.base}/posts/{post_id}", json=payload,
-                          auth=self.auth, timeout=self.timeout)
-        r.raise_for_status()
-        return r.json()["id"]
-
-    def upload_media(self, filename: str, content: bytes, mime: str) -> int:
-        r = requests.post(f"{self.base}/media", data=content,
-                          headers={"Content-Disposition": f'attachment; filename="{filename}"',
-                                   "Content-Type": mime},
-                          auth=self.auth, timeout=self.timeout)
-        r.raise_for_status()
-        return r.json()["id"]
-
-    def read_post_meta(self, post_id: int, key: str):
-        return self._get(f"/posts/{post_id}").get("meta", {}).get(key)
+    def create_post(self, payload):
+        r=requests.post(f"{self.base}/posts",json=payload,auth=self.auth,timeout=self.timeout)
+        r.raise_for_status(); return r.json()["id"]
+    def update_post(self, pid, payload):
+        r=requests.post(f"{self.base}/posts/{pid}",json=payload,auth=self.auth,timeout=self.timeout)
+        r.raise_for_status(); return r.json()["id"]
+    def upload_media(self, filename, content, mime):
+        r=requests.post(f"{self.base}/media",data=content,
+            headers={"Content-Disposition":f'attachment; filename="{filename}"',
+                     "Content-Type":mime},auth=self.auth,timeout=self.timeout)
+        r.raise_for_status(); return r.json()["id"]
+    def read_post_meta(self, pid, key):
+        return self._get(f"/posts/{pid}").get("meta",{}).get(key)
+    def delete_post(self, pid):
+        requests.delete(f"{self.base}/posts/{pid}",params={"force":True},
+                        auth=self.auth,timeout=self.timeout)
 ```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_wp_client.py -v`
-Expected: PASS (3 tests).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/lib/wp_client.py tests/test_wp_client.py && git commit -m "feat: thin WP REST client (mocked-tested)"
-```
+- [ ] **Step 4: Run, verify pass** — PASS (4).
+- [ ] **Step 5: Commit** — `git add scripts/lib/wp_client.py tests/test_wp_client.py && git commit -m "feat: WP REST client; uid lookup via /ae/v1/find"`
 
 ---
 
-### Task 9: `scripts/probe.py` — P0 design-gating preflight
+### Task 9: `wp-helper-plugin/ae-helper.php` — ALWAYS installed (audit M3)
 
-**Files:**
-- Create: `scripts/probe.py`
-- Create: `tests/test_probe.py`
+Stock WP REST cannot query unregistered meta and silently drops it. This always-installed plugin makes `ae_content_uid` REST-writable and provides a server-side find route (server-side `WP_Query` meta_query *does* work). It also carries the **conditional** SEO-meta-write route used only if the probe finds plugin meta unwritable.
 
-- [ ] **Step 1: Write the failing tests (incl. adversarial)**
+**Files:** Create `wp-helper-plugin/ae-helper.php`, `wp-helper-plugin/README.md`
 
-`tests/test_probe.py`:
-```python
-import responses, yaml, pathlib
-from scripts.probe import probe_meta_writable
-
-BASE = "https://www.trainingint.com/wp-json/wp/v2"
-
-@responses.activate
-def test_meta_writable_true_when_readback_matches():
-    responses.post(f"{BASE}/posts", json={"id": 7}, status=201)
-    responses.post(f"{BASE}/posts/7", json={"id": 7}, status=200)
-    responses.get(f"{BASE}/posts/7",
-                  json={"id": 7, "meta": {"rank_math_title": "PROBE-TOKEN"}}, status=200)
-    responses.delete(f"{BASE}/posts/7", json={"deleted": True}, status=200)
-    from scripts.lib.wp_client import WPClient
-    wp = WPClient(BASE, "u", "p")
-    assert probe_meta_writable(wp, "rank_math_title", "PROBE-TOKEN") is True
-
-# ADVERSARIAL: a probe that hardcodes True must fail when readback does NOT match.
-@responses.activate
-def test_meta_writable_false_when_readback_mismatches():
-    responses.post(f"{BASE}/posts", json={"id": 8}, status=201)
-    responses.post(f"{BASE}/posts/8", json={"id": 8}, status=200)
-    responses.get(f"{BASE}/posts/8",
-                  json={"id": 8, "meta": {"rank_math_title": ""}}, status=200)  # NOT written
-    responses.delete(f"{BASE}/posts/8", json={"deleted": True}, status=200)
-    from scripts.lib.wp_client import WPClient
-    wp = WPClient(BASE, "u", "p")
-    assert probe_meta_writable(wp, "rank_math_title", "PROBE-TOKEN") is False
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_probe.py -v`
-Expected: FAIL (module missing).
-
-- [ ] **Step 3: Implement**
-
-`scripts/probe.py`:
-```python
-"""P0 design-gating preflight. Probes the LIVE site; writes results into
-config/sites.yaml. Never assume runtime facts — they come from the target."""
-import os, sys, yaml, pathlib, datetime, requests
-from dotenv import load_dotenv
-from scripts.lib.wp_client import WPClient, UID_META
-
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-
-def probe_meta_writable(wp: WPClient, meta_key: str, token: str) -> bool:
-    """Create throwaway draft, write meta, READ IT BACK, confirm, delete.
-    Returns True only if the readback equals what we wrote."""
-    pid = wp.create_post({"title": "AE PROBE — delete me", "status": "draft",
-                          "content": "<p>probe</p>", "meta": {meta_key: token}})
-    try:
-        wp.update_post(pid, {"meta": {meta_key: token}})
-        got = wp.read_post_meta(pid, meta_key)
-        return got == token
-    finally:
-        requests.delete(f"{wp.base}/posts/{pid}", params={"force": True},
-                        auth=wp.auth, timeout=wp.timeout)
-
-def detect_seo_plugin(wp: WPClient) -> str:
-    """Heuristic: probe a post's meta keys / known REST routes."""
-    try:
-        sample = wp._get("/posts", per_page=1)
-        meta = (sample[0].get("meta", {}) if sample else {})
-        if any(k.startswith("rank_math") for k in meta):
-            return "rankmath"
-        if any(k.startswith("_yoast") for k in meta):
-            return "yoast"
-    except Exception:
-        pass
-    return "none"
-
-def run(site: str = "trainingint"):
-    load_dotenv(ROOT / "credentials/.env")
-    cfg = yaml.safe_load((ROOT / "config/sites.yaml").read_text())
-    s = cfg["sites"][site]
-    pw = os.environ.get(s["app_password_env"])
-    user = os.environ.get(s["app_password_env"] + "_USER")
-    if not pw or not user:
-        sys.exit(f"Set {s['app_password_env']} and {s['app_password_env']}_USER "
-                 f"in credentials/.env")
-    wp = WPClient(s["wp_api_base"], user, pw)
-
-    p = s["probe"]
-    try:
-        wp.me(); p["rest_ok"] = True
-    except Exception as e:
-        p["rest_ok"] = False
-        print(f"REST/auth FAILED: {e}")
-    if p["rest_ok"]:
-        plugin = detect_seo_plugin(wp)
-        p["seo_plugin"] = plugin
-        meta_key = {"rankmath": "rank_math_title",
-                    "yoast": "_yoast_wpseo_title"}.get(plugin)
-        p["seo_meta_rest_writable"] = (
-            probe_meta_writable(wp, meta_key, "AE-PROBE-TOKEN")
-            if meta_key else False)
-    p["probed_at"] = datetime.date.today().isoformat()
-
-    (ROOT / "config/sites.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))
-    print("PROBE RESULT:", yaml.safe_dump(p, sort_keys=False))
-    print("\nMANUAL probe items still required before first batch:")
-    print(" - html_renders_ok: push a test HTML draft, view it in wp-admin, set true/false")
-    print(" - wpcron_reliable: confirm a real cron hits wp-cron.php (or install "
-          "'Missed Scheduled Posts Publisher'); set true/false")
-    print(" - default_category_id / default_author_id: read from wp-admin; fill in")
-    print(" - keyword_data: ubersuggest_csv if you will drop CSVs, else ai_only")
-    print("Edit config/sites.yaml probe block for these, then proceed.")
-
-if __name__ == "__main__":
-    run(sys.argv[1] if len(sys.argv) > 1 else "trainingint")
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_probe.py -v`
-Expected: PASS (2 tests, incl. adversarial mismatch case).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/probe.py tests/test_probe.py && git commit -m "feat: P0 live-site probe with meta write-readback (adversarial-tested)"
-```
-
-- [ ] **Step 6: Live run (owner prerequisite — not automatable)**
-
-Owner creates a WP application password on trainingint.com (Users → Profile → Application Passwords), puts into `credentials/.env`:
-```
-WP_TRAININGINT=xxxx xxxx xxxx xxxx
-WP_TRAININGINT_USER=vinai
-```
-Run: `python scripts/probe.py trainingint`
-Expected: `config/sites.yaml` `probe:` block filled; console prints the manual items. **GATE: do not start Phase P3 (publish) until `rest_ok: true` and `seo_meta_rest_writable` is decided.** If `seo_meta_rest_writable: false` → Task 14 (helper plugin) becomes required.
-
----
-
-## Phase P3 — Publisher
-
-### Task 10: `scripts/wp_publish.py` — idempotent scheduled-post publisher
-
-**Files:**
-- Create: `scripts/wp_publish.py`
-- Create: `tests/test_wp_publish.py`
-
-- [ ] **Step 1: Write the failing tests — THE duplicate-post adversarial test**
-
-`tests/test_wp_publish.py`:
-```python
-import responses
-from scripts.lib.wp_client import WPClient
-from scripts.wp_publish import publish_article
-
-BASE = "https://www.trainingint.com/wp-json/wp/v2"
-
-def _wp():
-    return WPClient(BASE, "u", "p")
-
-@responses.activate
-def test_first_publish_creates_scheduled_post():
-    responses.get(f"{BASE}/posts", json=[], status=200)          # uid not found
-    created = responses.post(f"{BASE}/posts", json={"id": 100}, status=201)
-    pid = publish_article(_wp(), uid="uid-1", slug="how-to-x",
-                          title="How to X", html="<p>body</p>",
-                          meta={}, scheduled_iso="2026-06-01T09:00:00",
-                          category_id=5, author_id=1)
-    assert pid == 100
-    assert created.call_count == 1
-    body = responses.calls[-1].request.body
-    assert b'"status": "future"' in body and b"2026-06-01T09:00:00" in body
-
-# ADVERSARIAL: a publisher that always POSTs /posts creates a DUPLICATE.
-# This test MUST fail such an implementation.
-@responses.activate
-def test_rerun_with_same_uid_updates_not_duplicates():
-    responses.get(f"{BASE}/posts", json=[{"id": 100}], status=200)  # uid FOUND
-    create = responses.post(f"{BASE}/posts", json={"id": 999}, status=201)
-    update = responses.post(f"{BASE}/posts/100", json={"id": 100}, status=200)
-    pid = publish_article(_wp(), uid="uid-1", slug="how-to-x",
-                          title="How to X", html="<p>body</p>",
-                          meta={}, scheduled_iso="2026-06-01T09:00:00",
-                          category_id=5, author_id=1)
-    assert pid == 100, "must return the EXISTING post id"
-    assert create.call_count == 0, "must NOT create a second post on rerun"
-    assert update.call_count == 1, "must update the existing post"
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `python -m pytest tests/test_wp_publish.py -v`
-Expected: FAIL (module missing).
-
-- [ ] **Step 3: Implement**
-
-`scripts/wp_publish.py`:
-```python
-"""Idempotent scheduled-post publisher. Search-before-create on content_uid
-guarantees a rerun never duplicates a post (the key audit finding F6)."""
-import hashlib
-from scripts.lib.wp_client import WPClient, UID_META
-
-def content_uid(site: str, slug: str) -> str:
-    return hashlib.sha1(f"{site}:{slug}".encode()).hexdigest()[:16]
-
-def publish_article(wp: WPClient, uid: str, slug: str, title: str, html: str,
-                    meta: dict, scheduled_iso: str, category_id: int,
-                    author_id: int) -> int:
-    payload = {
-        "title": title, "slug": slug, "content": html,
-        "status": "future", "date": scheduled_iso,
-        "categories": [category_id], "author": author_id,
-        "meta": {**meta, UID_META: uid},
-    }
-    existing = wp.find_post_by_uid(uid) or wp.find_post_by_slug(slug)
-    if existing is not None:
-        return wp.update_post(existing, payload)
-    return wp.create_post(payload)
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `python -m pytest tests/test_wp_publish.py -v`
-Expected: PASS — both, including `test_rerun_with_same_uid_updates_not_duplicates` (proves no duplicate post on rerun).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/wp_publish.py tests/test_wp_publish.py && git commit -m "feat: idempotent scheduled-post publisher (duplicate-post adversarial test green)"
-```
-
----
-
-## Phase P1/P2 — Pipeline slash-command ports
-
-> These are prompt files, not unit-testable code. Each task: copy the **verified** softskills source, apply the listed transforms, then run the structural verification. The verification step is the gate.
-
-### Task 11: Port `ae-1` … `ae-4`
-
-**Files:**
-- Create: `.claude/commands/ae-1-keyword-research.md` (from softskills `blog-1-keyword-research.md`)
-- Create: `.claude/commands/ae-2-serp-analyze.md` (from `blog-2-serp-analyze.md`)
-- Create: `.claude/commands/ae-3-draft.md` (from `blog-3-draft.md`)
-- Create: `.claude/commands/ae-4-voice-pass.md` (from `blog-4-voice-pass.md`)
-
-- [ ] **Step 1: Copy verified sources**
-
-```bash
-cd D:/VP/ARTICLE_ENGINE && mkdir -p .claude/commands
-cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-1-keyword-research.md" .claude/commands/ae-1-keyword-research.md
-cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-2-serp-analyze.md"     .claude/commands/ae-2-serp-analyze.md
-cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-3-draft.md"            .claude/commands/ae-3-draft.md
-cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-4-voice-pass.md"       .claude/commands/ae-4-voice-pass.md
-```
-
-- [ ] **Step 2: Apply these exact transforms to all four files**
-
-In each `ae-*.md`, find-and-replace (literal):
-1. `softskills.sg blog pipeline` → `Article Engine pipeline (trainingint.com)`
-2. `src/content/blog/$ARGUMENTS/` → `content/trainingint/$ARGUMENTS/`
-3. `seo/pillar-map.yaml` → `courses/trainingint.yaml` (topic source is the course spine, not the softskills pillar-map)
-4. Authoritative-spec line → `**Authoritative spec:** docs/superpowers/specs/2026-05-19-article-engine-design.md`
-5. Remove any `K1 fixture` / `how-to-speak-confidently-in-meetings` canonical-fixture lines (softskills-specific; no fixture exists here yet — replace with: "No canonical fixture yet; follow the output shape described below.")
-6. In `ae-2`, add to Outputs: "Also write `content/trainingint/$ARGUMENTS/_research/serp-bodies/{1,2,3}.txt` — the full extracted body text of the top-3 results (required input for the /ae-6 originality + n-gram gates)."
-7. In `ae-3`, keep the Pexels image step verbatim (uses `PEXELS_API_KEY` from `credentials/.env`, same as softskills).
-
-- [ ] **Step 3: Verify**
-
-Run:
-```bash
-grep -L "Article Engine pipeline" .claude/commands/ae-{1,2,3,4}-*.md   # expect: no output (all transformed)
-grep -l "softskills.sg\|pillar-map.yaml\|how-to-speak-confidently" .claude/commands/ae-*.md  # expect: no output
-test -f .claude/commands/ae-2-serp-analyze.md && grep -q "serp-bodies" .claude/commands/ae-2-serp-analyze.md && echo "ae-2 serp-bodies OK"
-```
-Expected: first two greps print nothing; third prints `ae-2 serp-bodies OK`.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add .claude/commands/ae-{1,2,3,4}-*.md && git commit -m "feat: port ae-1..4 pipeline commands from softskills (WP-targeted)"
-```
-
----
-
-### Task 12: Port `ae-6-seo-pass` (gates now call the Python libs)
-
-**Files:**
-- Create: `.claude/commands/ae-6-seo-pass.md` (from softskills `blog-6-seo-pass.md`)
-
-- [ ] **Step 1: Copy verified source**
-
-```bash
-cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-6-seo-pass.md" .claude/commands/ae-6-seo-pass.md
-```
-
-- [ ] **Step 2: Apply transforms**
-
-1. Same global replaces as Task 11 Step 2 (items 1–5).
-2. Output `_draft/04-seo.md` → `_draft/04-seo.html` (WP body is HTML, not MDX).
-3. Replace the "VOICE-DAMAGE CHECK" section's manual instruction with: "Compute the voice-survival ratio programmatically: `python -c \"from scripts.lib.ngram import voice_survival_ratio; import pathlib; print(voice_survival_ratio(open('content/trainingint/$ARGUMENTS/_draft/04-seo.html').read(), open('content/trainingint/$ARGUMENTS/_draft/03-voice.md').read()))\"`. If < 0.85, STOP and show the diff; do not write 04-seo.html."
-4. Replace the `src/lib/link-budget.ts` / `npx tsx` validator block with: "Build the link inventory dict and run `python -c \"import yaml,json; from scripts.lib.link_budget import validate_links; ...\"` against `config/sites.yaml` `sites.trainingint.link_budget`. If it returns any violations, fix and revalidate before writing."
-5. Replace the originality-gate prose with: "Run `scripts.lib.originality.originality_report(article, stories_md, stats_md, serp_bodies)` where `serp_bodies` = the three files in `_research/serp-bodies/`. If `passes` is False, surface back to the user — do not paper over."
-6. Replace "Schema is auto-emitted by BlogLayout" with: "Build JSON-LD with `scripts.lib.jsonld.build_jsonld(...)`; pass `suppress={'FAQPage','BreadcrumbList'}` for any type the active SEO plugin already emits per `config/sites.yaml` `probe.seo_plugin_emits_graph`. Embed the returned `<script type=\"application/ld+json\">` block at the end of the HTML body."
-7. Keep the 80-item checklist step pointed at `seo/checklist.md` (vendored, unchanged).
-8. Keep the "confirm Stage 5 human edit is done" gate verbatim — this is the D3 review gate.
-
-- [ ] **Step 3: Verify**
-
-Run:
-```bash
-grep -q "voice_survival_ratio" .claude/commands/ae-6-seo-pass.md && \
-grep -q "originality_report" .claude/commands/ae-6-seo-pass.md && \
-grep -q "build_jsonld" .claude/commands/ae-6-seo-pass.md && \
-grep -q "04-seo.html" .claude/commands/ae-6-seo-pass.md && \
-! grep -q "npx tsx\|BlogLayout\|04-seo.md\b" .claude/commands/ae-6-seo-pass.md && echo "ae-6 OK"
-```
-Expected: prints `ae-6 OK`.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add .claude/commands/ae-6-seo-pass.md && git commit -m "feat: port ae-6-seo-pass; gates call the Python libs"
-```
-
----
-
-### Task 13: Author `ae-batch.md` and `ae-8-publish.md`
-
-`ae-8-publish` is a heavy rewrite of softskills `blog-8-publish.md` (read verbatim 2026-05-19): drop Lighthouse gate, MDX promotion, Astro build, git/Coolify, GSC (none apply to WP). Keep: cadence guard, originality re-check, link-budget, schema validation, slug uniqueness, pillar(→course) registration. Replace publish actions with a `scripts/wp_publish.py` call.
-
-**Files:**
-- Create: `.claude/commands/ae-8-publish.md`
-- Create: `.claude/commands/ae-batch.md`
-
-- [ ] **Step 1: Write `ae-8-publish.md`**
-
-```markdown
----
-description: Stage 8 — push reviewed batch to WordPress as future-dated scheduled posts. Strict pre-flight gates. Idempotent (no duplicate posts on rerun).
-argument-hint: <slug> [--override]
----
-
-# /ae-8-publish
-
-You are running **Stage 8** for slug `$ARGUMENTS` on trainingint.com.
-
-**Authoritative spec:** docs/superpowers/specs/2026-05-19-article-engine-design.md §8
-
-## Inputs
-- content/trainingint/$ARGUMENTS/_draft/04-seo.html (Stage 6 output)
-- content/trainingint/$ARGUMENTS/_research/serp-bodies/ (gate inputs)
-- config/sites.yaml (probe results + link budget; REFUSE if probe.rest_ok != true)
-- courses/trainingint.yaml (slug must be registered with matching primary_keyword)
-- status/trainingint.yaml (cadence + scheduled-date assignment)
-
-## PRE-FLIGHT GATES (all must pass — refuse if any fail; only --override bypasses cadence)
-1. **Probe gate:** config/sites.yaml sites.trainingint.probe.rest_ok must be true and
-   seo_meta_rest_writable must be non-null. If seo_meta_rest_writable is false, the
-   helper plugin (wp-helper-plugin/) must be installed first — confirm, else REFUSE.
-2. **Cadence guard (HARD):** count status=scheduled/published in status/trainingint.yaml
-   with a date in the last 7 days. If > 5 (the per_week cap), REFUSE unless --override.
-3. **Originality:** run scripts.lib.originality.originality_report; REFUSE if not passes.
-4. **Voice-damage:** scripts.lib.ngram.voice_survival_ratio(04-seo.html, 03-voice.md)
-   must be >= 0.85, else REFUSE.
-5. **Link budget:** scripts.lib.link_budget.validate_links must return [] against
-   sites.trainingint.link_budget, else REFUSE (list the violations).
-6. **Anti-plagiarism:** scripts.lib.ngram.overlap_8gram(article, each serp-bodies file)
-   must be empty; if any 8-gram shared, REFUSE and name the phrase.
-7. **Slug uniqueness:** slug not already published on the site (wp_client.find_post_by_slug
-   returns None OR the found post carries this slug's content_uid — i.e. it's our own
-   prior scheduled post, which is allowed = idempotent update).
-8. **Course registration:** slug exists in courses/trainingint.yaml with matching
-   primary_keyword and a course_url; REFUSE if missing.
-
-## Publish action (single idempotent call)
-Compute scheduled date = next free weekday slot from status/trainingint.yaml (5/week,
-Mon–Fri, 09:00 local). Then run:
-```bash
-python -c "
-from scripts.lib.wp_client import WPClient
-from scripts.wp_publish import publish_article, content_uid
-import os,yaml,pathlib
-# load config + .env, build WPClient, read 04-seo.html + meta + category/author
-# from config/sites.yaml probe block, then:
-pid = publish_article(wp, content_uid('trainingint','$ARGUMENTS'), '$ARGUMENTS',
-        title, html, meta, scheduled_iso, category_id, author_id)
-print('post id', pid)
-"
-```
-This is idempotent: a rerun with the same slug UPDATES the existing scheduled post,
-never creates a duplicate (enforced + adversarial-tested in scripts/wp_publish.py).
-
-## After publish
-- Update status/trainingint.yaml: slug → status: scheduled, scheduled_date, wp_post_id
-- Surface: post id, scheduled date, the wp-admin edit URL
-  (https://www.trainingint.com/wp-admin/post.php?post=<id>&action=edit), and a reminder
-  that WordPress will auto-publish on the scheduled date IF wp-cron is reliable
-  (config/sites.yaml probe.wpcron_reliable).
-
-## Refuse to proceed if
-- Any gate fails (say which gate and the exact failure)
-- probe.rest_ok != true (run scripts/probe.py first)
-```
-
-- [ ] **Step 2: Write `ae-batch.md`**
-
-```markdown
----
-description: Drive 5–15 slugs through ae-1..ae-6, stopping at the human review gate, then list what's ready for ae-8.
-argument-hint: <course-id or comma-separated slugs>
----
-
-# /ae-batch
-
-You are running a **batch** for `$ARGUMENTS` on trainingint.com.
-
-## Process
-1. Resolve slugs: if $ARGUMENTS is a course id, take that course's `status: idea`
-   slugs from courses/trainingint.yaml (skip `status: proposed` — quarantined).
-   Cap the batch at 15.
-2. For each slug, in order, run the equivalent of: /ae-1 → /ae-2 → /ae-3 → /ae-4.
-   Use parallel sub-agents per slug where independent (softskills did this).
-   Each stage writes its artifact before the next; safe to resume.
-3. **STOP at the human review gate.** Print a table: slug | title | primary_keyword |
-   draft path (content/trainingint/<slug>/_draft/03-voice.md). Tell the owner:
-   "Edit each 03-voice.md. When done, run /ae-6-seo-pass <slug> per slug, then
-   /ae-8-publish <slug> per accepted slug."
-4. Do NOT run /ae-6 or /ae-8 automatically — those are post-review.
-
-## Refuse
-- If config/sites.yaml probe.rest_ok != true, warn that publishing is blocked until
-  /scripts/probe.py passes (research/draft may still proceed).
-```
-
-- [ ] **Step 3: Verify**
-
-Run:
-```bash
-grep -q "find_post_by_slug returns None OR the found post carries" .claude/commands/ae-8-publish.md && \
-grep -q "status: proposed" .claude/commands/ae-batch.md && \
-! grep -qi "lighthouse\|coolify\|index.mdx\|npm run build\|GSC indexing" .claude/commands/ae-8-publish.md && \
-echo "ae-8 + ae-batch OK"
-```
-Expected: prints `ae-8 + ae-batch OK` (confirms Astro/Lighthouse/Coolify removed, quarantine + idempotency present).
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add .claude/commands/ae-8-publish.md .claude/commands/ae-batch.md && git commit -m "feat: ae-8-publish (WP scheduled, idempotent) + ae-batch driver"
-```
-
----
-
-## Phase P3 (conditional) — Helper plugin
-
-### Task 14: WP helper plugin — ONLY IF `probe.seo_meta_rest_writable == false`
-
-Skip entirely if the Task 9 live probe set `seo_meta_rest_writable: true`. Do not build speculatively.
-
-**Files (conditional):**
-- Create: `wp-helper-plugin/ae-helper.php`
-
-- [ ] **Step 1: Confirm the runtime fact from the target, not assumption**
-
-Run: `python -c "import yaml; print(yaml.safe_load(open('config/sites.yaml'))['sites']['trainingint']['probe']['seo_meta_rest_writable'])"`
-- If `True` → **STOP. This task is not needed.** Mark complete-skipped.
-- If `False` → proceed. Also confirm the server PHP version (do not assume): owner runs in wp-admin → Tools → Site Health → Info → Server, reports PHP version; the plugin header below targets PHP 7.4+ (broadest WP-safe baseline) — adjust only if Site Health shows otherwise.
-
-- [ ] **Step 2: Write the plugin**
-
-`wp-helper-plugin/ae-helper.php`:
+- [ ] **Step 1: Write the plugin** — `wp-helper-plugin/ae-helper.php`:
 ```php
 <?php
 /**
  * Plugin Name: Article Engine Helper
- * Description: Hardened REST endpoint to set SEO-plugin meta the public REST API blocks.
+ * Description: Registers ae_content_uid (REST) + /ae/v1/find idempotency route; optional /ae/v1/meta for blocked SEO meta.
  * Version: 1.0.0
  * Requires PHP: 7.4
  */
 if (!defined('ABSPATH')) exit;
 
+add_action('init', function () {
+    register_post_meta('post', 'ae_content_uid', [
+        'show_in_rest'      => true,
+        'single'            => true,
+        'type'              => 'string',
+        'auth_callback'     => function () { return current_user_can('edit_posts'); },
+    ]);
+});
+
 add_action('rest_api_init', function () {
+    register_rest_route('ae/v1', '/find', [
+        'methods'  => 'GET',
+        'permission_callback' => function () { return current_user_can('edit_posts'); },
+        'callback' => function (WP_REST_Request $r) {
+            $uid = sanitize_text_field($r->get_param('uid'));
+            $q = new WP_Query([
+                'post_type'   => 'post',
+                'post_status' => 'any',
+                'meta_key'    => 'ae_content_uid',
+                'meta_value'  => $uid,
+                'fields'      => 'ids',
+                'posts_per_page' => 1,
+            ]);
+            if (empty($q->posts)) {
+                return new WP_Error('ae_not_found', 'no post for uid', ['status' => 404]);
+            }
+            return ['id' => (int) $q->posts[0]];
+        },
+    ]);
     register_rest_route('ae/v1', '/meta/(?P<id>\d+)', [
         'methods'  => 'POST',
-        'permission_callback' => function () {
-            return current_user_can('edit_posts'); // app-password user must have this cap
-        },
+        'permission_callback' => function () { return current_user_can('edit_posts'); },
         'callback' => function (WP_REST_Request $r) {
             $id = (int) $r['id'];
-            $meta = $r->get_json_params()['meta'] ?? [];
-            if (!is_array($meta) || get_post_status($id) === false) {
-                return new WP_Error('ae_bad', 'bad request', ['status' => 400]);
+            if (get_post_status($id) === false) {
+                return new WP_Error('ae_bad', 'bad id', ['status' => 400]);
             }
-            foreach ($meta as $k => $v) {
+            foreach (($r->get_json_params()['meta'] ?? []) as $k => $v) {
                 update_post_meta($id, sanitize_key($k), wp_kses_post($v));
             }
             return ['ok' => true, 'id' => $id];
@@ -1334,57 +577,455 @@ add_action('rest_api_init', function () {
     ]);
 });
 ```
+`wp-helper-plugin/README.md`: "Zip this folder → trainingint wp-admin → Plugins → Upload Plugin → Activate. Required before Task 10 probe and any /ae-8-publish. The app-password user must have the `edit_posts` capability."
+- [ ] **Step 2: Owner installs (prerequisite, not automatable)** — Owner zips `wp-helper-plugin/`, uploads + activates on trainingint.com. Confirm `GET https://www.trainingint.com/wp-json/ae/v1/find?uid=__none__` returns HTTP 404 (route exists, no match) not 404-route-missing — i.e. JSON body `{"code":"ae_not_found"}`.
+- [ ] **Step 3: Commit** — `git add wp-helper-plugin/ && git commit -m "feat: always-installed WP helper (uid meta + find route + optional meta route)"`
 
-- [ ] **Step 3: Wire the publisher to use it (conditional branch)**
+---
 
-Modify `scripts/wp_publish.py` — add after the `publish_article` create/update returns `pid`, when `site_cfg["probe"]["seo_meta_rest_writable"]` is False, POST the meta to `/ae/v1/meta/{pid}` instead of relying on the core `meta` field. Add this function and call it from `ae-8`'s publish step:
+### Task 10: `scripts/probe.py` — P0 design-gating (incl. uid round-trip — audit M3)
+
+**Files:** Create `scripts/probe.py`, `tests/test_probe.py`
+
+- [ ] **Step 1: Failing tests (incl. adversarial)** — `tests/test_probe.py`:
 ```python
-import requests
-def push_meta_via_helper(wp, post_id: int, meta: dict) -> None:
-    base = wp.base.replace("/wp/v2", "")  # -> https://site/wp-json
-    r = requests.post(f"{base}/ae/v1/meta/{post_id}", json={"meta": meta},
-                      auth=wp.auth, timeout=wp.timeout)
+import responses
+from scripts.lib.wp_client import WPClient
+from scripts.probe import probe_meta_writable, probe_uid_roundtrip
+WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
+def wp(): return WPClient(WP,"u","p")
+@responses.activate
+def test_meta_writable_true_on_match():
+    responses.post(f"{WP}/posts", json={"id":7}, status=201)
+    responses.post(f"{WP}/posts/7", json={"id":7}, status=200)
+    responses.get(f"{WP}/posts/7", json={"id":7,"meta":{"rank_math_title":"TOK"}}, status=200)
+    responses.delete(f"{WP}/posts/7", json={}, status=200)
+    assert probe_meta_writable(wp(),"rank_math_title","TOK") is True
+@responses.activate
+def test_meta_writable_false_on_mismatch():   # ADVERSARIAL: hardcoded True fails
+    responses.post(f"{WP}/posts", json={"id":8}, status=201)
+    responses.post(f"{WP}/posts/8", json={"id":8}, status=200)
+    responses.get(f"{WP}/posts/8", json={"id":8,"meta":{"rank_math_title":""}}, status=200)
+    responses.delete(f"{WP}/posts/8", json={}, status=200)
+    assert probe_meta_writable(wp(),"rank_math_title","TOK") is False
+@responses.activate
+def test_uid_roundtrip_false_when_find_misses():  # ADVERSARIAL: idempotency must be proven live
+    responses.post(f"{WP}/posts", json={"id":9}, status=201)
+    responses.get(f"{AE}/find", status=404)        # helper can't find what we just wrote
+    responses.delete(f"{WP}/posts/9", json={}, status=200)
+    assert probe_uid_roundtrip(wp()) is False
+```
+- [ ] **Step 2: Run, verify fail** — FAIL.
+- [ ] **Step 3: Implement** — `scripts/probe.py`:
+```python
+"""P0 design-gating preflight. Probes the LIVE site; writes results into
+config/sites.yaml. Runtime facts come from the target, never assumed."""
+import os, sys, yaml, pathlib, datetime, uuid
+from dotenv import load_dotenv
+from scripts.lib.wp_client import WPClient
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+
+def probe_meta_writable(wp, meta_key, token):
+    pid=wp.create_post({"title":"AE PROBE del","status":"draft",
+                        "content":"<p>x</p>","meta":{meta_key:token}})
+    try:
+        wp.update_post(pid,{"meta":{meta_key:token}})
+        return wp.read_post_meta(pid,meta_key)==token
+    finally:
+        wp.delete_post(pid)
+
+def probe_uid_roundtrip(wp):
+    """Prove the idempotency mechanism on the LIVE site: write ae_content_uid,
+    then resolve it back via the helper /ae/v1/find route."""
+    tok="probe-"+uuid.uuid4().hex[:10]
+    pid=wp.create_post({"title":"AE UID PROBE","status":"draft",
+                        "content":"<p>x</p>","meta":{"ae_content_uid":tok}})
+    try:
+        return wp.find_post_by_uid(tok)==pid
+    finally:
+        wp.delete_post(pid)
+
+def detect_seo_plugin(wp):
+    try:
+        s=wp._get("/posts",per_page=1); meta=(s[0].get("meta",{}) if s else {})
+        if any(k.startswith("rank_math") for k in meta): return "rankmath"
+        if any(k.startswith("_yoast") for k in meta): return "yoast"
+    except Exception: pass
+    return "none"
+
+def run(site="trainingint"):
+    load_dotenv(ROOT/"credentials/.env")
+    cfg=yaml.safe_load((ROOT/"config/sites.yaml").read_text())
+    s=cfg["sites"][site]
+    pw=os.environ.get(s["app_password_env"]); user=os.environ.get(s["app_password_env"]+"_USER")
+    if not pw or not user:
+        sys.exit(f"Set {s['app_password_env']} and {s['app_password_env']}_USER in credentials/.env")
+    wp=WPClient(s["wp_api_base"],user,pw); p=s["probe"]
+    try: wp.me(); p["rest_ok"]=True
+    except Exception as e: p["rest_ok"]=False; print("REST/auth FAILED:",e)
+    if p["rest_ok"]:
+        try: p["uid_roundtrip_ok"]=probe_uid_roundtrip(wp)
+        except Exception as e: p["uid_roundtrip_ok"]=False; print("UID roundtrip FAILED (helper plugin installed?):",e)
+        plugin=detect_seo_plugin(wp); p["seo_plugin"]=plugin
+        mk={"rankmath":"rank_math_title","yoast":"_yoast_wpseo_title"}.get(plugin)
+        p["seo_meta_rest_writable"]=probe_meta_writable(wp,mk,"AE-PROBE-TOK") if mk else False
+    p["probed_at"]=datetime.date.today().isoformat()
+    (ROOT/"config/sites.yaml").write_text(yaml.safe_dump(cfg,sort_keys=False))
+    print("PROBE:",yaml.safe_dump(p,sort_keys=False))
+    print("\nMANUAL items to fill in config/sites.yaml before first batch:")
+    print(" html_renders_ok, wpcron_reliable, default_category_id,")
+    print(" default_author_id, keyword_data (ubersuggest_csv|ai_only)")
+
+if __name__=="__main__":
+    run(sys.argv[1] if len(sys.argv)>1 else "trainingint")
+```
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_probe.py -v` → PASS (3, incl. both adversarial).
+- [ ] **Step 5: Commit** — `git add scripts/probe.py tests/test_probe.py && git commit -m "feat: P0 probe incl. live uid-roundtrip (adversarial-tested)"`
+- [ ] **Step 6: Owner live run (prerequisite — not automatable)** — Owner creates a WP application password (trainingint wp-admin → Users → Profile → Application Passwords; the user must have `edit_posts`), Task 9 plugin already active, then `credentials/.env`:
+```
+WP_TRAININGINT=xxxx xxxx xxxx xxxx
+WP_TRAININGINT_USER=vinai
+```
+Run `python scripts/probe.py trainingint`. **HARD GATE:** do not start Task 11's live use or any `/ae-8-publish` unless `rest_ok: true` AND `uid_roundtrip_ok: true` (idempotency real on this site) AND `seo_meta_rest_writable` is non-null. If `seo_meta_rest_writable: false`, publishing must route SEO meta through `/ae/v1/meta` (already in the Task 9 plugin; wired in Task 11).
+
+---
+
+### Task 11: `scripts/wp_publish.py` — idempotent publisher + media + internal links (audit M3/M4)
+
+**Files:** Create `scripts/wp_publish.py`, `tests/test_wp_publish.py`
+
+- [ ] **Step 1: Failing tests — duplicate-post + media + link-resolution + helper-meta** — `tests/test_wp_publish.py`:
+```python
+import responses
+from scripts.lib.wp_client import WPClient
+from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper
+WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
+def wp(): return WPClient(WP,"u","p")
+
+@responses.activate
+def test_first_publish_creates_scheduled():
+    responses.get(f"{AE}/find", status=404)            # uid not found
+    responses.get(f"{WP}/posts", json=[], status=200)  # slug not found
+    cr=responses.post(f"{WP}/posts", json={"id":100}, status=201)
+    pid=publish_article(wp(),"uid1","how-to-x","How to X","<p>b</p>",{},
+                        "2026-06-01T09:00:00",5,1)
+    assert pid==100 and cr.call_count==1
+    body=responses.calls[-1].request.body
+    assert b'"future"' in body and b"2026-06-01T09:00:00" in body
+
+@responses.activate
+def test_rerun_same_uid_updates_not_duplicates():     # ADVERSARIAL: always-create stub fails
+    responses.get(f"{AE}/find", json={"id":100}, status=200)   # uid FOUND
+    cr=responses.post(f"{WP}/posts", json={"id":999}, status=201)
+    up=responses.post(f"{WP}/posts/100", json={"id":100}, status=200)
+    pid=publish_article(wp(),"uid1","how-to-x","How to X","<p>b</p>",{},
+                        "2026-06-01T09:00:00",5,1)
+    assert pid==100 and cr.call_count==0 and up.call_count==1
+
+def test_resolve_internal_links_in_batch_vs_unresolved():
+    html='See <a href="ae:sibling:how-to-y">Y</a> and <a href="ae:sibling:how-to-z">Z</a>.'
+    status={"how-to-y":{"url":"https://www.trainingint.com/blog/how-to-y/"}}
+    out,unresolved=resolve_internal_links(html,status)
+    assert "https://www.trainingint.com/blog/how-to-y/" in out
+    assert "ae:sibling:how-to-y" not in out
+    assert "how-to-z" in unresolved and 'href="ae:sibling:how-to-z"' not in out  # left as plain text
+
+@responses.activate
+def test_push_meta_via_helper():
+    h=responses.post(f"{AE}/meta/100", json={"ok":True,"id":100}, status=200)
+    push_meta_via_helper(wp(),100,{"rank_math_title":"T"})
+    assert h.call_count==1
+```
+- [ ] **Step 2: Run, verify fail** — FAIL.
+- [ ] **Step 3: Implement** — `scripts/wp_publish.py`:
+```python
+"""Idempotent scheduled-post publisher. find_post_by_uid hits the always-installed
+helper route (Task 9), so a rerun never duplicates a post — verified live by
+probe_uid_roundtrip (Task 10) before this is used."""
+import re, hashlib, mimetypes, pathlib, requests
+
+def content_uid(site, slug):
+    return hashlib.sha1(f"{site}:{slug}".encode()).hexdigest()[:16]
+
+def resolve_internal_links(html, status_map):
+    """Replace ae:sibling:<slug> hrefs with live URLs for siblings present in
+    status_map; for siblings not yet live, strip the anchor to plain text and
+    report them (NO autonomous edits to other posts — spec §8)."""
+    unresolved=[]
+    def repl(m):
+        slug=m.group(1)
+        info=status_map.get(slug)
+        if info and info.get("url"):
+            return f'href="{info["url"]}"'
+        unresolved.append(slug)
+        return 'data-ae-unresolved="1"'
+    html=re.sub(r'href="ae:sibling:([^"]+)"', repl, html)
+    # turn any anchor we could not resolve into plain text (drop the <a> wrapper)
+    for slug in set(unresolved):
+        html=re.sub(r'<a [^>]*data-ae-unresolved="1"[^>]*>(.*?)</a>', r'\1', html, count=1)
+    return html, unresolved
+
+def upload_featured(wp, image_path):
+    p=pathlib.Path(image_path)
+    mime=mimetypes.guess_type(p.name)[0] or "image/jpeg"
+    return wp.upload_media(p.name, p.read_bytes(), mime)
+
+def push_meta_via_helper(wp, post_id, meta):
+    r=requests.post(f"{wp.ae_base}/meta/{post_id}", json={"meta":meta},
+                    auth=wp.auth, timeout=wp.timeout)
     r.raise_for_status()
+
+def publish_article(wp, uid, slug, title, html, meta, scheduled_iso,
+                    category_id, author_id, featured_path=None,
+                    status_map=None, seo_meta_rest_writable=True):
+    if status_map is not None:
+        html, _ = resolve_internal_links(html, status_map)
+    payload={"title":title,"slug":slug,"content":html,"status":"future",
+             "date":scheduled_iso,"categories":[category_id],"author":author_id,
+             "meta":{**({} if not seo_meta_rest_writable else meta),
+                     "ae_content_uid":uid}}
+    if featured_path:
+        payload["featured_media"]=upload_featured(wp, featured_path)
+    existing=wp.find_post_by_uid(uid) or wp.find_post_by_slug(slug)
+    pid=wp.update_post(existing,payload) if existing is not None else wp.create_post(payload)
+    if not seo_meta_rest_writable and meta:
+        push_meta_via_helper(wp, pid, meta)
+    return pid
 ```
-Add `tests/test_wp_publish.py` case (responses-mocked) asserting `push_meta_via_helper` POSTs to `/ae/v1/meta/100` and raises on non-2xx.
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_wp_publish.py -v` → PASS (4, incl. duplicate-post + link-resolution + helper-meta).
+- [ ] **Step 5: Commit** — `git add scripts/wp_publish.py tests/test_wp_publish.py && git commit -m "feat: idempotent publisher + media + internal-link resolution (adversarial-tested)"`
 
-- [ ] **Step 4: Verify + commit**
+---
 
-Run: `python -m pytest tests/test_wp_publish.py -v` → PASS.
-Owner installs `wp-helper-plugin/` on trainingint (zip the folder → Plugins → Upload → Activate), re-runs `python scripts/probe.py trainingint`, confirms meta now writes via helper.
+### Task 12: Port `ae-1`…`ae-4` (deterministic transforms — audit B1)
+
+**Files:** Create `.claude/commands/ae-{1,2,3,4}-*.md`
+
+- [ ] **Step 1: Copy verified sources**
 ```bash
-git add wp-helper-plugin/ scripts/wp_publish.py tests/test_wp_publish.py && git commit -m "feat: conditional WP helper plugin for blocked SEO meta"
+cd D:/VP/ARTICLE_ENGINE && mkdir -p .claude/commands
+cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-1-keyword-research.md" .claude/commands/ae-1-keyword-research.md
+cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-2-serp-analyze.md"     .claude/commands/ae-2-serp-analyze.md
+cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-3-draft.md"            .claude/commands/ae-3-draft.md
+cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-4-voice-pass.md"       .claude/commands/ae-4-voice-pass.md
 ```
+- [ ] **Step 2: Apply DETERMINISTic transforms to all four** (sed; order matters):
+```bash
+cd D:/VP/ARTICLE_ENGINE/.claude/commands
+for f in ae-1-keyword-research.md ae-2-serp-analyze.md ae-3-draft.md ae-4-voice-pass.md; do
+  sed -i \
+    -e 's#src/content/blog/\$ARGUMENTS#content/trainingint/$ARGUMENTS#g' \
+    -e 's#seo/pillar-map\.yaml#courses/trainingint.yaml#g' \
+    -e 's#softskills\.sg blog pipeline#Article Engine pipeline (trainingint.com)#g' \
+    -e 's#softskills\.sg#trainingint.com#g' \
+    -e '/how-to-speak-confidently-in-meetings/d' \
+    -e '/[Cc]anonical fixture/d' \
+    -e '/[Cc]anonical reference/d' \
+    -e '/K1 fixture/d' \
+    -e 's#docs/superpowers/specs/2026-04-30-softskills-blog-seo-pipeline-design\.md#docs/superpowers/specs/2026-05-19-article-engine-design.md#g' \
+    "$f"
+done
+# ae-2: append the serp-bodies output requirement (gate input for /ae-6)
+printf '\n\n## Additional output (Article Engine)\nAlso write `content/trainingint/$ARGUMENTS/_research/serp-bodies/{1,2,3}.txt` — the full extracted body text of the top-3 results. Required input for the /ae-6 originality + n-gram gates.\n' >> ae-2-serp-analyze.md
+```
+- [ ] **Step 3: Verify (aligned to what the transforms actually produce)**
+```bash
+cd D:/VP/ARTICLE_ENGINE/.claude/commands
+! grep -li "softskills\|how-to-speak-confidently\|pillar-map\.yaml\|src/content/blog\|2026-04-30-softskills" ae-{1,2,3,4}-*.md && \
+grep -q "serp-bodies" ae-2-serp-analyze.md && \
+grep -q "Article Engine pipeline (trainingint.com)" ae-1-keyword-research.md && echo "ae-1..4 OK"
+```
+Expected: prints `ae-1..4 OK` (the leading `!` makes the first grep succeed only if NOTHING matches — i.e. every softskills/fixture/old-path string is gone).
+- [ ] **Step 4: Commit** — `git add .claude/commands/ae-{1,2,3,4}-*.md && git commit -m "feat: port ae-1..4 (deterministic WP transforms)"`
 
 ---
 
-## Phase P4/P5 — Integration runbook (owner-driven, not unit-tested)
+### Task 13: Port `ae-6-seo-pass` (real source strings + trainingint links — audit B2/M6)
 
-### Task 15: First real batch end-to-end (P4)
+**Files:** Create `.claude/commands/ae-6-seo-pass.md`
 
-- [ ] **Step 1:** Owner completes Task 9 Step 6 manual probe items in `config/sites.yaml` (`html_renders_ok`, `wpcron_reliable`, `default_category_id`, `default_author_id`, `keyword_data`). For `html_renders_ok`: run `/ae-8-publish` on ONE throwaway slug, open the wp-admin edit URL, confirm the HTML + JSON-LD render in the post editor and front-end preview; set true/false; if false, escalate (body-format branch — do not proceed).
-- [ ] **Step 2:** Run `/ae-batch writing-professional-emails` → produces 5 drafts to `content/trainingint/<slug>/_draft/03-voice.md`, stops at review gate.
-- [ ] **Step 3:** Owner does a genuine edit pass on each `03-voice.md` (D3 — this is the real scaled-content-abuse defence; not optional).
-- [ ] **Step 4:** Per accepted slug: `/ae-6-seo-pass <slug>` then `/ae-8-publish <slug>`. Confirm in `status/trainingint.yaml` each is `scheduled` with a distinct weekday date and a `wp_post_id`.
-- [ ] **Step 5:** On the first scheduled date, confirm the post auto-published (front-end URL live). If it "missed schedule", `probe.wpcron_reliable` was wrong — install the missed-schedule guard plugin and re-confirm.
-- [ ] **Step 6:** Commit the run artifacts: `git add content/ status/ && git commit -m "content: first trainingint batch (writing-professional-emails cluster)"`
+- [ ] **Step 1: Copy verified source**
+```bash
+cp "D:/vp/softskills/1-NEW-SSKILLS/.claude/commands/blog-6-seo-pass.md" \
+   D:/VP/ARTICLE_ENGINE/.claude/commands/ae-6-seo-pass.md
+```
+- [ ] **Step 2: Apply transforms (target strings verified present in blog-6 2026-05-19)**
+```bash
+cd D:/VP/ARTICLE_ENGINE/.claude/commands
+sed -i \
+  -e 's#src/content/blog/\$ARGUMENTS#content/trainingint/$ARGUMENTS#g' \
+  -e 's#softskills\.sg blog pipeline#Article Engine pipeline (trainingint.com)#g' \
+  -e 's#softskills\.sg#trainingint.com#g' \
+  -e 's#04-seo\.md#04-seo.html#g' \
+  -e '/how-to-speak-confidently-in-meetings/d' \
+  -e '/[Cc]anonical fixture/d' \
+  -e 's#docs/superpowers/specs/2026-04-30-softskills-blog-seo-pipeline-design\.md#docs/superpowers/specs/2026-05-19-article-engine-design.md#g' \
+  ae-6-seo-pass.md
+```
+Then make these explicit content replacements (the literal source lines exist — verified):
+- Replace the line containing `these become FAQPage JSON-LD via \`BlogLayout\`` with: `  - \`faqs\` array filled (4–8 Q&A — these become FAQPage JSON-LD built by scripts.lib.jsonld)`
+- Replace the bullet starting `- **Schema is auto-emitted** by \`BlogLayout\`` (through `...those generators consume.`) with:
+  `- **Schema:** build JSON-LD via \`python -c "from scripts.lib.jsonld import build_jsonld; ..."\`; pass \`suppress={'FAQPage','BreadcrumbList'}\` for any type the active SEO plugin already emits (config/sites.yaml probe.seo_plugin_emits_graph). Embed the returned \`<script type="application/ld+json">\` block at the end of the HTML body.`
+- Replace the **Internal link insertions** + **External link insertions** sub-section (the lines specifying "3–5 internal trainingint.com blog links", "1–2 internal trainingint.com course/category links", "≤3 trainingint.com links", "≤1 intellisoft.com.sg link" — note the global `softskills.sg→trainingint.com` already mangled these) with the trainingint budget verbatim:
+  ```
+  - **Internal links (trainingint.com siblings):** 2–3 links to sibling blog posts in the same course cluster. Use `href="ae:sibling:<slug>"` placeholders — scripts/wp_publish.py resolves these to live URLs at publish (unresolved siblings are dropped to plain text, never linked broken).
+  - **Course links:** exactly 1 primary course (the cluster's `course_url`) as an above-fold CTA + a bottom CTA + at most 1 contextual body link (same URL ≤3×). 2–3 secondary courses (from courses/trainingint.yaml `secondary_courses`) as contextual links.
+  - **Authoritative outbound:** 1–2 (SSG, MOM, HBR, peer-reviewed), `target="_blank" rel="noopener"`, never `rel="sponsored"`.
+  ```
+- Replace the VOICE-DAMAGE manual instruction with: `Compute programmatically: python -c "from scripts.lib.ngram import voice_survival_ratio as v; print(v(open('content/trainingint/$ARGUMENTS/_draft/04-seo.html',encoding='utf-8').read(), open('content/trainingint/$ARGUMENTS/_draft/03-voice.md',encoding='utf-8').read()))". If < 0.85, STOP, show the diff, do not write 04-seo.html.`
+- Replace the `src/lib/link-budget.ts` / `npx tsx` validator block with: `Build the link inventory dict and run scripts.lib.link_budget.validate_links(inv, budget) where budget = config/sites.yaml sites.trainingint.link_budget. If it returns any violations, fix and revalidate before writing 04-seo.html.`
+- Replace the originality-gate prose with: `Run scripts.lib.originality.originality_report(article, open('voice/stories.md').read(), open('voice/stats.md').read(), [open(f).read() for f in glob('content/trainingint/$ARGUMENTS/_research/serp-bodies/*.txt')]). If passes is False, surface to the user — do not paper over.`
+- [ ] **Step 3: Verify**
+```bash
+cd D:/VP/ARTICLE_ENGINE/.claude/commands
+grep -q "voice_survival_ratio" ae-6-seo-pass.md && \
+grep -q "originality_report" ae-6-seo-pass.md && \
+grep -q "build_jsonld" ae-6-seo-pass.md && \
+grep -q "ae:sibling:" ae-6-seo-pass.md && \
+grep -q "04-seo.html" ae-6-seo-pass.md && \
+! grep -qi "npx tsx\|auto-emitted\|softskills\|04-seo\.md\b\|BlogLayout" ae-6-seo-pass.md && echo "ae-6 OK"
+```
+Expected: prints `ae-6 OK` (confirms TS validator, BlogLayout, softskills refs, .md output all gone; Python gates + sibling placeholders + HTML output present).
+- [ ] **Step 4: Commit** — `git add .claude/commands/ae-6-seo-pass.md && git commit -m "feat: port ae-6 (Python gates, trainingint link budget, real-string transforms)"`
 
-### Task 16: Multi-site proof (P5)
+---
 
-- [ ] **Step 1:** Add a second site block to `config/sites.yaml` (e.g. `intellisoft`) with its `wp_api_base`, `app_password_env`, `link_budget`, empty `probe`.
+### Task 14: `ae-8-publish.md` + `ae-batch.md` (null-probe-field hard gate — audit M5)
+
+**Files:** Create `.claude/commands/ae-8-publish.md`, `.claude/commands/ae-batch.md`
+
+- [ ] **Step 1: Write `ae-8-publish.md`**
+```markdown
+---
+description: Stage 8 — push a reviewed slug to WordPress as a future-dated scheduled post. Strict gates. Idempotent (no duplicate on rerun).
+argument-hint: <slug> [--override]
+---
+
+# /ae-8-publish
+
+Stage 8 for `$ARGUMENTS` on trainingint.com.
+**Spec:** docs/superpowers/specs/2026-05-19-article-engine-design.md §8
+
+## PRE-FLIGHT GATES (refuse if any fail; only --override bypasses cadence)
+1. **Probe gate (HARD):** from config/sites.yaml sites.trainingint.probe, REFUSE unless
+   ALL of: rest_ok==true, uid_roundtrip_ok==true, seo_meta_rest_writable is not null,
+   default_category_id is not null, default_author_id is not null,
+   html_renders_ok==true, wpcron_reliable==true, keyword_data is not null.
+   (A null here means P0/Task 15 Step 1 is incomplete — do not publish blind.)
+2. **Cadence guard:** count status/trainingint.yaml entries with scheduled_date in the
+   last 7 days; if > cadence.per_week (5), REFUSE unless --override.
+3. **Voice-damage:** scripts.lib.ngram.voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85.
+4. **Originality:** scripts.lib.originality.originality_report(...).passes is True.
+5. **Anti-plagiarism:** scripts.lib.ngram.overlap_8gram(article, each _research/serp-bodies/*.txt)
+   is empty; else REFUSE naming the phrase.
+6. **Link budget:** scripts.lib.link_budget.validate_links(inv, budget) == [].
+7. **Course registration:** $ARGUMENTS exists in courses/trainingint.yaml with matching
+   primary_keyword and a course_url; else REFUSE.
+
+## Publish (single idempotent call)
+scheduled_iso = next free weekday 09:00 slot from status/trainingint.yaml (5/wk Mon–Fri).
+Run python that: loads config + credentials/.env, builds WPClient, reads 04-seo.html,
+then calls scripts.wp_publish.publish_article(wp, content_uid('trainingint',slug), slug,
+title, html, seo_meta, scheduled_iso, probe.default_category_id, probe.default_author_id,
+featured_path=<hero image>, status_map=<status/trainingint.yaml>,
+seo_meta_rest_writable=probe.seo_meta_rest_writable). Idempotent: rerun UPDATES, never
+duplicates (helper /ae/v1/find + adversarial-tested in scripts/wp_publish.py).
+
+## After publish
+Update status/trainingint.yaml: slug → {status: scheduled, scheduled_date, wp_post_id}.
+Surface: post id, scheduled date, wp-admin edit URL
+(https://www.trainingint.com/wp-admin/post.php?post=<id>&action=edit), and any
+unresolved sibling links returned (they were dropped to plain text — they re-link
+naturally when the sibling publishes and that article is regenerated/edited).
+
+## Refuse if any gate fails — say which gate and the exact failure.
+```
+- [ ] **Step 2: Write `ae-batch.md`**
+```markdown
+---
+description: Drive 5–15 slugs through ae-1..ae-4, stop at the human review gate.
+argument-hint: <course-id | comma-separated slugs>
+---
+
+# /ae-batch
+
+Batch for `$ARGUMENTS` on trainingint.com.
+
+## Process
+1. Resolve slugs: if a course id, take that course's `status: idea` slugs from
+   courses/trainingint.yaml (SKIP `status: proposed` — quarantined per spec §6). Cap 15.
+2. Per slug in order: /ae-1 → /ae-2 → /ae-3 → /ae-4. Parallel sub-agents per slug
+   where independent (softskills pattern). Each stage writes its artifact before next; resumable.
+3. **STOP at the human review gate.** Print a table: slug | title | primary_keyword |
+   content/trainingint/<slug>/_draft/03-voice.md. Tell the owner: edit each 03-voice.md;
+   then per accepted slug run /ae-6-seo-pass <slug> then /ae-8-publish <slug>.
+4. Do NOT run /ae-6 or /ae-8 automatically — those are post-review.
+
+## Warn (don't block research) if config/sites.yaml probe.rest_ok != true:
+publishing is blocked until scripts/probe.py passes; research/draft may still proceed.
+```
+- [ ] **Step 3: Verify**
+```bash
+cd D:/VP/ARTICLE_ENGINE/.claude/commands
+grep -q "uid_roundtrip_ok==true" ae-8-publish.md && \
+grep -q "default_category_id is not null" ae-8-publish.md && \
+grep -q "status: proposed" ae-batch.md && \
+! grep -qi "lighthouse\|coolify\|index.mdx\|npm run build\|GSC indexing" ae-8-publish.md && \
+echo "ae-8 + ae-batch OK"
+```
+Expected: prints `ae-8 + ae-batch OK`.
+- [ ] **Step 4: Commit** — `git add .claude/commands/ae-8-publish.md .claude/commands/ae-batch.md && git commit -m "feat: ae-8 (full probe gate) + ae-batch driver"`
+
+---
+
+### Task 15: First real batch end-to-end (P4, owner-driven)
+
+- [ ] **Step 1:** Owner fills the manual probe fields in `config/sites.yaml` after a render check: run `/ae-8-publish` on ONE throwaway slug, open the wp-admin edit URL + front-end preview, confirm HTML + JSON-LD render. Set `html_renders_ok`, `wpcron_reliable` (confirm a real cron hits `wp-cron.php` or install "Missed Scheduled Posts Publisher"), `default_category_id`, `default_author_id`, `keyword_data`. If `html_renders_ok` is false → STOP, escalate (body-format branch, spec §9.4).
+- [ ] **Step 2:** `/ae-batch writing-professional-emails` → 5 drafts to `_draft/03-voice.md`, stops at review gate.
+- [ ] **Step 3:** Owner does a **genuine edit pass** on each `03-voice.md` (D3 — the real scaled-content-abuse defence; not optional).
+- [ ] **Step 4:** Per accepted slug: `/ae-6-seo-pass <slug>` then `/ae-8-publish <slug>`. Confirm `status/trainingint.yaml` shows each `scheduled` with a distinct weekday date + `wp_post_id`.
+- [ ] **Step 5:** On the first scheduled date, confirm the post auto-published (front-end URL live). If it "missed schedule", `wpcron_reliable` was wrong — install the missed-schedule guard and re-confirm.
+- [ ] **Step 6:** `git add content/ status/ && git commit -m "content: first trainingint batch (writing-professional-emails)"`
+
+---
+
+### Task 16: Multi-site proof (P5, owner-driven)
+
+- [ ] **Step 1:** Add a second site block to `config/sites.yaml` (e.g. `intellisoft`) with `wp_api_base`, `ae_api_base`, `app_password_env`, `link_budget`, empty `probe`.
 - [ ] **Step 2:** Create `courses/intellisoft.yaml` (same shape as trainingint).
-- [ ] **Step 3:** Owner creates the WP app password for that site; run `python scripts/probe.py intellisoft`; resolve manual probe items.
-- [ ] **Step 4:** Run `/ae-batch <course-id>` then review → `/ae-6` → `/ae-8-publish` for that site (the commands already parameterise the site via the slug's course file; confirm no trainingint-specific hardcode leaked — `grep -rn "trainingint" .claude/commands/` should only show example text, not logic). **Gate:** zero code changes were needed to onboard the second site.
-- [ ] **Step 5:** `git commit -m "feat: multi-site proof (second site via config only)"`
+- [ ] **Step 3:** Owner installs the Task 9 helper plugin on that site, creates its WP app password, runs `python scripts/probe.py intellisoft`, fills manual probe fields.
+- [ ] **Step 4:** `grep -rn "trainingint" .claude/commands/` — confirm only example text, not logic, is site-specific. Run `/ae-batch <course-id>` for that site → review → `/ae-6` → `/ae-8-publish`. **Gate:** zero code changes were needed to onboard the second site.
+- [ ] **Step 5:** `git commit -m "feat: multi-site proof (second site via config + helper only)"`
 
 ---
 
-## Self-Review (performed against spec v3)
+## Self-Review (grounded in steps, not task names — per obs #59)
 
-**1. Spec coverage:** §3 reuse → Tasks 3,11,12,13 cite verified sources only. §5 topology → Tasks 1–13 create exactly the spec's file tree. §6 cluster spine + quarantine → Task 2 (`status: proposed`) + Task 13 ae-batch skip. §7 stages → Tasks 11,12,13. §7.1 gates (originality/n-gram/voice-damage/link-budget) → Tasks 4,5,6 with adversarial tests, wired in Task 12. §8 wp_publish (idempotent create, scheduled, internal-link discipline) → Task 10 (+ duplicate-post adversarial test) and ae-8 gate 7. §9 P0 probe (incl. meta write-readback, manual render/wpcron) → Task 9. §10 voice/SEO DATA + sync.md → Task 3. §11 risks: duplicate-post (Task 10 test), meta-not-writable branch (Task 14), wpcron (Task 15 Step 5). §12 phases P0–P5 → Tasks 1–16. No spec section left without a task.
+**1. Spec coverage (cite implementing step):**
+- §3 reuse → Tasks 3/12/13 copy only audit-verified sources; transform strings verified against real files.
+- §5 topology → Tasks 1–14 create exactly the spec file tree (incl. `wp-helper-plugin/`).
+- §6 cluster + quarantine → Task 2 `status: idea/proposed`; Task 14 `ae-batch.md` Step "SKIP `status: proposed`".
+- §7 stages → Task 12 (ae-1..4), Task 13 (ae-6), Task 14 (ae-8/ae-batch).
+- §7.1 gates → originality Task 5, n-gram/voice-damage Task 4, link-budget Task 6, all wired in Task 13 Step 2 and gated in Task 14 ae-8 gates 3–6; each has a named adversarial test (traced below).
+- §8.1 idempotent create → Task 11 `publish_article` `existing=find_post_by_uid or find_post_by_slug`; **made real on stock WP** by Task 9 plugin (registered meta + `/ae/v1/find`) and proven live by Task 10 `probe_uid_roundtrip` (gated in Task 14 gate 1).
+- §8.2 media/featured → Task 11 `upload_featured` + `payload["featured_media"]`, test `test_first_publish_creates_scheduled` path + `upload_media` in Task 8.
+- §8.5 internal-link resolution (404 lesson, no silent live edits) → Task 11 `resolve_internal_links` + test `test_resolve_internal_links_in_batch_vs_unresolved`; unresolved siblings become plain text, never broken links, never edits to other posts.
+- §8.4 SEO meta + helper branch → Task 9 conditional `/ae/v1/meta`; Task 11 `push_meta_via_helper` when `seo_meta_rest_writable` false; test `test_push_meta_via_helper`.
+- §9 probe (rest, plugin, meta-writable, uid-roundtrip, manual render/wpcron/ids) → Task 10; gated in Task 14 gate 1 (ALL fields incl. nulls — fixes audit M5).
+- §10 voice/SEO DATA + sync.md → Task 3.
+- §12 phases P0–P5 → Tasks 1–16.
+No spec requirement is matched to a task name only; each maps to a concrete step/function/test above.
 
-**2. Placeholder scan:** No "TBD/handle errors/similar to". Conditional Task 14 has an explicit skip gate, not a placeholder. Runbook tasks (15,16) are owner-driven by nature (live site, app passwords) and say so explicitly with concrete commands.
+**2. Placeholder scan:** none. Owner-driven runbook Tasks 15–16 are live-site by nature and say so with concrete commands. Conditional SEO-meta route lives in the always-installed Task 9 plugin (no separate conditional task to skip).
 
-**3. Type consistency:** `WPClient` methods (`me/find_post_by_uid/find_post_by_slug/create_post/update_post/upload_media/read_post_meta`) defined in Task 8 are exactly those called in Tasks 9,10,14. `publish_article(wp, uid, slug, title, html, meta, scheduled_iso, category_id, author_id)` signature in Task 10 matches its test and the ae-8 call. `UID_META`/`content_uid` consistent across Tasks 8,10. `originality_report`/`validate_links`/`voice_survival_ratio`/`overlap_8gram`/`build_jsonld` signatures match between defining task, tests, and the ae-6 wiring in Task 12.
+**3. Type consistency:** `WPClient` methods (Task 8: `me/find_post_by_uid/find_post_by_slug/create_post/update_post/upload_media/read_post_meta/delete_post`, attr `ae_base`) match every caller (Tasks 10, 11). `publish_article(wp,uid,slug,title,html,meta,scheduled_iso,category_id,author_id,featured_path=None,status_map=None,seo_meta_rest_writable=True)` matches its tests and the Task 14 ae-8 call. `resolve_internal_links`/`upload_featured`/`push_meta_via_helper`/`content_uid` consistent across Task 11 def + tests + ae-8. `ae_content_uid` string identical in Task 9 PHP, Task 8/10/11 Python.
 
-**4. Adversarial coverage (superpowers-extras: plan code is unvalidated code):** every gate lib + the publisher ships a test a no-op/buggy impl fails — n-gram (`test_overlap_no_op_implementation_fails`), originality (`test_no_op_pass_stub_fails`), link-budget (`test_too_many_primary_course_occurrences_is_violation`), probe (`test_meta_writable_false_when_readback_mismatches`), publisher (`test_rerun_with_same_uid_updates_not_duplicates`). Runtime facts (REST/meta/render/wpcron/PHP version) are taken from the live target via Task 9 + Task 14 Step 1, never assumed.
+**4. Adversarial-test trace (each named test vs a trivial stub):**
+- ngram `test_overlap_no_op_implementation_fails`: stub `return []` → `assert overlap_8gram(t,t)` fails. ✅ bites.
+- ngram voice half: stub `return 1.0` → `< 0.85` assert fails. ✅
+- originality `test_no_op_pass_stub_fails`: stub `{"passes":True}` → `assert not r["passes"]` fails. ✅
+- link_budget `test_too_many_primary_occurrences`: stub `return []` → `any("primary_course_occurrences"...)` fails. ✅
+- jsonld `test_suppress_skips_node`: stub ignoring `suppress` still emits FAQPage → `assert "FAQPage" not in types` fails (M8 fixed — was weak). ✅
+- probe `test_meta_writable_false_on_mismatch` + `test_uid_roundtrip_false_when_find_misses`: hardcoded-True stubs fail (readback/​find mismatch). ✅
+- wp_publish `test_rerun_same_uid_updates_not_duplicates`: always-create stub → `cr.call_count==0` fails. ✅ And this is now *semantically* real (not just mock-true) because Task 9 registers the meta + find route and Task 10 proves the round-trip live before Task 11 is used.
+Runtime facts (REST/meta/uid-roundtrip/render/wpcron/category-author ids) all come from Task 10 live probe + Task 15 Step 1, gated in Task 14 gate 1; none assumed.
