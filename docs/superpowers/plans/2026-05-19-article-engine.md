@@ -12,7 +12,7 @@
 
 **v2 changes (from independent plan audit 2026-05-19):** B1/B2 — port transforms made deterministic, verify steps aligned to real source strings. M3 — idempotency reworked: an **always-installed** helper plugin registers `ae_content_uid` (show_in_rest) and a server-side `/ae/v1/find` route, because stock WP REST cannot query unregistered meta and silently drops it. M4 — Task 11 now uploads featured media + resolves internal links. M5 — ae-8 hard-gates on all required probe fields. M6/M7/M8 — ae-6 link-section retargeted to trainingint; Bash-tool note; jsonld gets a real adversarial test.
 
-**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan). **N2 (per-task quality review, Task 5)** same defect class in `scripts/lib/originality.py`: `_has_framework` matched only markdown `1./-/*` so it returned False on the real HTML `04-seo.html` (silently degrading the ≥2-of-4 gate); `_has_stat` matched any >6-char fragment so non-numeric `stats.md` lines (course names, bio, headers) false-passed; `_has_analogy` fired on "like you"; `_has_story` matched YAML-key noise. Fixed: framework counts HTML `<li>` + markdown; stat requires a digit; analogy requires a `like a/an/the` simile (or explicit cue); story skips YAML/header/blockquote lines. New real-input adversarial tests (real voice files + HTML article). **C2a left for owner:** `_has_story` is still verbatim-prefix (won't detect paraphrased signature stories) — flagged in Task 5 for an owner design decision, deliberately NOT auto-redesigned. **N3 (per-task quality review, Task 6)** `scripts/lib/link_budget.validate_links` had no code defect but 5 of 10 violation branches had zero tests (a `return []` stub passed them — and Task 14 wires this as a HARD publish gate), it dropped link-budget.md L13's "no naked URLs as anchor" rule, and a missing inv key (the dict is built by ae-6 in LLM prose) crashed with a bare `KeyError`. Fixed: added naked-URL ban (source-faithful), missing-key → named `inventory_incomplete` violation (fail diagnostic not crash), and 6 adversarial tests so every violation branch + the missing-key path is constrained.
+**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan). **N2 (per-task quality review, Task 5)** same defect class in `scripts/lib/originality.py`: `_has_framework` matched only markdown `1./-/*` so it returned False on the real HTML `04-seo.html` (silently degrading the ≥2-of-4 gate); `_has_stat` matched any >6-char fragment so non-numeric `stats.md` lines (course names, bio, headers) false-passed; `_has_analogy` fired on "like you"; `_has_story` matched YAML-key noise. Fixed: framework counts HTML `<li>` + markdown; stat requires a digit; analogy requires a `like a/an/the` simile (or explicit cue); story skips YAML/header/blockquote lines. New real-input adversarial tests (real voice files + HTML article). **C2a left for owner:** `_has_story` is still verbatim-prefix (won't detect paraphrased signature stories) — flagged in Task 5 for an owner design decision, deliberately NOT auto-redesigned. **N3 (per-task quality review, Task 6)** `scripts/lib/link_budget.validate_links` had no code defect but 5 of 10 violation branches had zero tests (a `return []` stub passed them — and Task 14 wires this as a HARD publish gate), it dropped link-budget.md L13's "no naked URLs as anchor" rule, and a missing inv key (the dict is built by ae-6 in LLM prose) crashed with a bare `KeyError`. Fixed: added naked-URL ban (source-faithful), missing-key → named `inventory_incomplete` violation (fail diagnostic not crash), and 6 adversarial tests so every violation branch + the missing-key path is constrained. **N4 (per-task quality review, Task 7)** `scripts/lib/jsonld.build_jsonld` — CRITICAL: `json.dumps` does not escape `/`, so a FAQ/title containing `</script>` would break out of the in-HTML `<script type="application/ld+json">` block ae-6 embeds it in (HTML-corruption/XSS); fixed with the standard `.replace("</","<\\/")` (valid JSON, json.loads unaffected). Added optional `image_url/date_published/date_modified` (Google Article rich-results need them) — lib now capable; ae-6/ae-8 date-wiring escalated to owner (dates unknown at ae-6 time). 7 previously-untested branches (suppress Article/Breadcrumb, faqs=[], breadcrumb=[], all-suppressed, multi-FAQ) now have adversarial tests. **N4-I1 left for owner:** JSON-LD image/date data-flow (scheduling is post-ae-6) — flagged in Task 7. **I2 (probe granularity):** binary `seo_plugin_emits_graph` can't express "plugin emits BreadcrumbList only"; ae-6 must pass a precise `suppress` set — revisit in Task 10/15 probe design.
 
 **Reuse-verification (filesystem-checked + audit-confirmed 2026-05-19):** `D:/VP/BLOG_AUDIT/` = 0 Python, nothing forked. Verified sources used: softskills `.claude/commands/blog-{1,2,3,4,6,8}-*.md`, `voice/*.md` (6), `seo/{checklist,link-budget,schema-templates}.md + audit-budgets.yaml + pillar-map.yaml`. Audit confirmed all exist; transform strings below were checked against the real files.
 
@@ -497,7 +497,7 @@ Shapes verified vs `D:/vp/softskills/1-NEW-SSKILLS/seo/schema-templates.md`.
 
 **Files:** Create `scripts/lib/jsonld.py`, `tests/test_jsonld.py`
 
-- [ ] **Step 1: Failing tests (incl. adversarial — a hardcoded-3-node stub must fail)** — `tests/test_jsonld.py`:
+- [ ] **Step 1: Failing tests (incl. adversarial + full branch coverage + HTML-embed safety — N4)** — `tests/test_jsonld.py`:
 ```python
 import json
 from scripts.lib.jsonld import build_jsonld
@@ -518,18 +518,54 @@ def test_three_nodes_and_content():
 def test_suppress_skips_node():   # ADVERSARIAL: a stub that ignores suppress fails
     types={n["@type"] for n in _b(suppress={"FAQPage"})["@graph"]}
     assert "FAQPage" not in types and "Article" in types
+def test_suppress_article_keeps_others():   # the real seo_plugin_emits_graph case
+    types={n["@type"] for n in _b(suppress={"Article"})["@graph"]}
+    assert "Article" not in types and "FAQPage" in types
+def test_suppress_breadcrumb():
+    types={n["@type"] for n in _b(suppress={"BreadcrumbList"})["@graph"]}
+    assert "BreadcrumbList" not in types and "Article" in types
+def test_faqs_empty_no_faqpage_node():      # guards the `and faqs` short-circuit
+    types={n["@type"] for n in _b(faqs=[])["@graph"]}
+    assert "FAQPage" not in types and "Article" in types
+def test_breadcrumb_empty_no_node():
+    types={n["@type"] for n in _b(breadcrumb=[])["@graph"]}
+    assert "BreadcrumbList" not in types
+def test_all_suppressed_empty_graph():
+    assert _b(suppress={"Article","FAQPage","BreadcrumbList"})["@graph"]==[]
+def test_multi_faq_positions_and_count():
+    g=_b(faqs=[{"q":"Q1?","a":"A1."},{"q":"Q2?","a":"A2."}])["@graph"]
+    fp=[n for n in g if n["@type"]=="FAQPage"][0]
+    assert [m["name"] for m in fp["mainEntity"]]==["Q1?","Q2?"]
+def test_script_breakout_escaped():   # ADVERSARIAL C1: raw json.dumps fails this
+    raw=build_jsonld(url="https://t/x/",title="T",description="d",author="A",
+        publisher="P",faqs=[{"q":"Q?","a":"x </script><script>alert(1)</script>"}],
+        breadcrumb=[("Home","https://t/")])
+    assert "</script>" not in raw and "<\\/script>" in raw
+    assert json.loads(raw)["@graph"]                 # still valid JSON
+def test_article_optional_fields():   # I1: image/dates emitted only when provided
+    art=[n for n in _b(image_url="https://t/i.jpg",date_published="2026-06-01",
+            date_modified="2026-06-02")["@graph"] if n["@type"]=="Article"][0]
+    assert art["image"]=="https://t/i.jpg" and art["datePublished"]=="2026-06-01" \
+       and art["dateModified"]=="2026-06-02"
+    art2=[n for n in _b()["@graph"] if n["@type"]=="Article"][0]
+    assert "image" not in art2 and "datePublished" not in art2  # absent by default
 ```
 - [ ] **Step 2: Run, verify fail** — FAIL.
-- [ ] **Step 3: Implement** — `scripts/lib/jsonld.py`:
+- [ ] **Step 3: Implement** — `scripts/lib/jsonld.py` (v2.1 N4: HTML-embed-safe serialization + optional Article image/dates):
 ```python
 import json
-def build_jsonld(url,title,description,author,publisher,faqs,breadcrumb,suppress=None):
+def build_jsonld(url,title,description,author,publisher,faqs,breadcrumb,
+                 suppress=None,image_url=None,date_published=None,date_modified=None):
     suppress=suppress or set(); g=[]
     if "Article" not in suppress:
-        g.append({"@type":"Article","headline":title,"description":description,
-                  "mainEntityOfPage":url,
-                  "author":{"@type":"Person","name":author},
-                  "publisher":{"@type":"Organization","name":publisher}})
+        art={"@type":"Article","headline":title,"description":description,
+             "mainEntityOfPage":url,
+             "author":{"@type":"Person","name":author},
+             "publisher":{"@type":"Organization","name":publisher}}
+        if image_url: art["image"]=image_url
+        if date_published: art["datePublished"]=date_published
+        if date_modified: art["dateModified"]=date_modified
+        g.append(art)
     if "FAQPage" not in suppress and faqs:
         g.append({"@type":"FAQPage","mainEntity":[
             {"@type":"Question","name":f["q"],
@@ -538,9 +574,13 @@ def build_jsonld(url,title,description,author,publisher,faqs,breadcrumb,suppress
         g.append({"@type":"BreadcrumbList","itemListElement":[
             {"@type":"ListItem","position":i+1,"name":n,"item":u}
             for i,(n,u) in enumerate(breadcrumb)]})
-    return json.dumps({"@context":"https://schema.org","@graph":g})
+    # `</` -> `<\/` so an answer containing </script> cannot break out of the
+    # in-HTML <script type="application/ld+json"> block ae-6 embeds this in.
+    # `\/` is a valid JSON escape for `/`, so json.loads() is unaffected.
+    return json.dumps({"@context":"https://schema.org","@graph":g}).replace("</","<\\/")
 ```
-- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_jsonld.py tests/test_scaffold.py -v` → PASS (incl. `test_libs_importable` now green).
+> **Plan-level decision flagged for owner (N4-I1, NOT auto-wired):** `build_jsonld` now *accepts* `image_url`/`date_published`/`date_modified` (Google Article rich-results need image+dates), but ae-6 (Task 13) builds the JSON-LD before the scheduled publish date is assigned (scheduling happens in ae-8). Decide the date source: (a) ae-6 omits dates and relies on the active SEO plugin to inject them (current default — Article node is structurally valid but rich-result-thin when no plugin), (b) ae-6 passes the hero `image_url` + a placeholder date that ae-8/wp_publish rewrites, or (c) build+embed JSON-LD at publish. Left as (a) pending owner call; the hero `image_url` SHOULD be passed by ae-6 once Task 11's media path is settled.
+- [ ] **Step 4: Run, verify pass** — `python -m pytest tests/test_jsonld.py tests/test_scaffold.py -v` → PASS (10 jsonld tests incl. C1 breakout + all branches; `test_libs_importable` now green).
 - [ ] **Step 5: Commit** — `git add scripts/lib/jsonld.py tests/test_jsonld.py && git commit -m "feat: JSON-LD builder (content + suppress adversarial-tested)"`
 
 ---
@@ -1188,6 +1228,8 @@ No spec requirement is matched to a task name only; each maps to a concrete step
 - link_budget `test_too_many_primary_occurrences`: stub `return []` → `any("primary_course_occurrences"...)` fails. ✅
 - link_budget N3 branch tests (`test_internal_sibling_max`, `test_primary_course_distinct`, `test_secondary_course_max`, `test_authoritative_max_and_naked_url_anchor`, `test_banned_generic_anchor`, `test_missing_inventory_key_is_named_violation`): each asserts a specific violation string → a `return []` (or KeyError-prone) stub fails every one. ✅ closes the 5/10 untested-branch blind spot on a hard gate.
 - jsonld `test_suppress_skips_node`: stub ignoring `suppress` still emits FAQPage → `assert "FAQPage" not in types` fails (M8 fixed — was weak). ✅
+- jsonld `test_script_breakout_escaped` (N4/C1): raw `json.dumps` leaves literal `</script>` → `assert "</script>" not in raw` fails. ✅ bites the original plan code (the HTML-embed XSS the quality gate caught).
+- jsonld N4 branch tests (suppress Article/Breadcrumb, faqs=[], breadcrumb=[], all-suppressed, multi-FAQ, optional image/dates): each constrains a branch a hardcoded/no-op stub would get wrong. ✅ closes the 7/13-untested-branch blind spot.
 - probe `test_meta_writable_false_on_mismatch` + `test_uid_roundtrip_false_when_find_misses`: hardcoded-True stubs fail (readback/​find mismatch). ✅
 - wp_publish `test_rerun_same_uid_updates_not_duplicates`: always-create stub → `cr.call_count==0` fails. ✅ And this is now *semantically* real (not just mock-true) because Task 9 registers the meta + find route and Task 10 proves the round-trip live before Task 11 is used.
 Runtime facts (REST/meta/uid-roundtrip/render/wpcron/category-author ids) all come from Task 10 live probe + Task 15 Step 1, gated in Task 14 gate 1; none assumed.
