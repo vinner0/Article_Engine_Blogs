@@ -46,7 +46,7 @@ The full 80-item checklist from `seo/checklist.md`, with per-item:
 
 ## VOICE-DAMAGE CHECK (hard gate — refuse to overwrite if it fires)
 Before writing `04-seo.html`:
-Compute programmatically: python -c "from scripts.lib.ngram import voice_survival_ratio as v; print(v(open('content/trainingint/$ARGUMENTS/_draft/04-seo.html',encoding='utf-8').read(), open('content/trainingint/$ARGUMENTS/_draft/03-voice.md',encoding='utf-8').read()))". If < 0.85, STOP, show the diff, do not write 04-seo.html.
+Compute programmatically: python -c "from scripts.lib.ngram import voice_survival_ratio as v; print(v(open('content/trainingint/$ARGUMENTS/_draft/04-seo.html',encoding='utf-8').read(), open('content/trainingint/$ARGUMENTS/_draft/03-voice.md',encoding='utf-8').read()))". If < 0.85, STOP, show the diff, delete the candidate `04-seo.html` and STOP.
 The SEO pass is for **structure, metadata, links** — it is NOT a rewrite. If you're tempted to rewrite a sentence "for clarity" or "for SEO", don't — that's voice damage.
 
 Acceptable changes that don't trigger the check:
@@ -59,23 +59,23 @@ Acceptable changes that don't trigger the check:
 Run scripts.lib.originality.originality_report(article, open('voice/stories.md').read(), open('voice/stats.md').read(), [open(f).read() for f in glob('content/trainingint/$ARGUMENTS/_research/serp-bodies/*.txt')]). If passes is False, surface to the user — do not paper over.
 
 ## Link budget validator
-Build the link inventory dict and run scripts.lib.link_budget.validate_links(inv, budget) where budget = config/sites.yaml sites.trainingint.link_budget. If it returns any violations, fix and revalidate before writing 04-seo.html.
+Build the link inventory dict and run scripts.lib.link_budget.validate_links(inv, budget) where budget = config/sites.yaml sites.trainingint.link_budget. If it returns any violations, fix and re-validate before the file stands.
 
 ## N-GRAM ANTI-PLAGIARISM (hard gate — refuse to write 04-seo.html if it fires)
 python -c "from scripts.lib.ngram import overlap_8gram; from glob import glob; a=open('content/trainingint/$ARGUMENTS/_draft/04-seo.html',encoding='utf-8').read(); bad=[(f,overlap_8gram(a,open(f,encoding='utf-8').read())) for f in glob('content/trainingint/$ARGUMENTS/_research/serp-bodies/*.txt')]; bad=[(f,h) for f,h in bad if h]; print('PLAGIARISM:',bad) if bad else print('PASS')"
-If any serp-body returns a non-empty overlap list, STOP, name the overlapping 8-word phrase(s), and do NOT write 04-seo.html. (Same contract as ae-8 gate 5.)
+If any serp-body returns a non-empty overlap list, STOP, name the overlapping 8-word phrase(s), and delete the candidate `04-seo.html` and STOP. (Same contract as ae-8 gate 5.)
 
 ## Process
 1. Confirm Stage 5 (human edit) is done
 2. Read `03-voice.md`, `seo/checklist.md`, `seo/link-budget.md`, `pillar-map.yaml`
 3. Identify candidate internal links (other blog posts + courses) and outbound authoritative links
-4. Plan all changes (structure, metadata, links) — assemble the candidate `04-seo.html` in memory; do NOT write it yet
-5. **Gate 1 — voice-damage:** run `voice_survival_ratio`; if < 0.85, STOP, show the diff, do not write
-6. **Gate 2 — n-gram anti-plagiarism:** run `overlap_8gram` vs every `_research/serp-bodies/*.txt`; if any non-empty, STOP, name the phrase, do not write
-7. **Gate 3 — link budget:** run `validate_links(inv, budget)`; if any violations, fix and revalidate, do not write
-8. **Gate 4 — originality:** run `originality_report(...)`; if `passes` is False, surface to the user, do not write
-9. Only if ALL FOUR gates passed, write `04-seo.html`
-10. Run the 80-item checklist; write `seo-checklist.md`
+4. Plan all changes (structure, metadata, links) and **WRITE the candidate `04-seo.html`** (the gates below read it from disk; it is provisional until all gates pass)
+5. **Gate 1 — voice-damage:** run `voice_survival_ratio`; if < 0.85: delete the candidate `04-seo.html`, show the diff, STOP
+6. **Gate 2 — n-gram anti-plagiarism:** run `overlap_8gram` vs every `_research/serp-bodies/*.txt`; if any non-empty: delete the candidate `04-seo.html`, name the phrase, STOP
+7. **Gate 3 — link budget:** run `validate_links(inv, budget)`; if any violations: fix and re-write the candidate, then re-run gates 1-3 (do not proceed with a violating file)
+8. **Gate 4 — originality:** run `originality_report(...)`; if `passes` is False: delete the candidate `04-seo.html`, surface to the user, STOP
+9. All four gates passed → `04-seo.html` stands (already on disk)
+10. Run the 80-item checklist; write `_audit/seo-checklist.md`
 
 ## Refuse to proceed if
 - Stage 4 output (`03-voice.md`) is missing
