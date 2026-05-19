@@ -1,0 +1,328 @@
+# Source of truth for pillar/cluster/post topology.
+# Every post must register here. Primary keywords MUST be unique.
+#
+# STRATEGY (revised 2026-05-02): each of the 6 approved WSQ courses gets a
+# dedicated cluster of 5 articles. All articles in a cluster point at the same
+# `target_course` and link to it from CTA + body. This concentrates topical
+# authority around the one URL we want to rank for each course buyer's query.
+#
+# 6 approved WSQ courses (canonical URLs in memory: trainingint_urls.md):
+#   1. Writing Professional Emails           → P1 cluster A
+#   2. Communicate with Confidence           → P1 cluster B
+#   3. Delivering Impactful Business Presentations → P1 cluster C
+#   4. Effective Negotiation Skills          → P6
+#   5. Uplifting Customer Service            → P5
+#   6. Time Management                       → P4
+
+pillars:
+  P1:
+    name: Communication & Presentation
+    hub_slug: communication-and-presentation
+    hub_keyword: communication skills training singapore
+    flagship_courses:
+      softskills_sg: https://softskills.sg/communicate-with-confidence-wsq-funded/
+      trainingint:
+        - https://www.trainingint.com/writing-professional-emails
+        - https://www.trainingint.com/communicate-with-confidence
+        - https://www.trainingint.com/business-presentation-skills-training-singapore
+    posts:
+      # ── Cluster A: Writing Professional Emails ───────────────────────────
+      - slug: how-to-write-professional-emails
+        primary_keyword: how to write a professional email
+        status: published
+        published_at: 2026-05-01
+        target_course: https://www.trainingint.com/writing-professional-emails
+        url: https://softskills.sg/blog/how-to-write-professional-emails/
+      - slug: how-to-write-a-follow-up-email
+        primary_keyword: how to write a follow up email
+        status: scheduled
+        published_at: 2026-05-11
+        target_course: https://www.trainingint.com/writing-professional-emails
+      - slug: how-to-write-a-formal-email-to-your-boss
+        primary_keyword: how to write a formal email to your boss
+        status: draft
+        target_course: https://www.trainingint.com/writing-professional-emails
+      - slug: how-to-write-an-apology-email-at-work
+        primary_keyword: how to write an apology email
+        status: scheduled
+        published_at: 2026-06-01
+        target_course: https://www.trainingint.com/writing-professional-emails
+      - slug: how-to-write-a-meeting-recap-email
+        primary_keyword: how to write a meeting recap email
+        status: draft
+        target_course: https://www.trainingint.com/writing-professional-emails
+      - slug: how-to-write-a-prospecting-email
+        primary_keyword: how to write a prospecting email
+        status: scheduled
+        published_at: 2026-06-10
+        target_course: https://www.trainingint.com/writing-professional-emails
+      - slug: how-to-write-a-budget-request-email
+        primary_keyword: how to write a budget request email
+        status: draft
+        target_course: https://www.trainingint.com/writing-professional-emails
+      - slug: how-to-write-a-resume-that-doesnt-sound-ai-written
+        primary_keyword: how to write a resume that doesn't sound ai
+        status: draft
+        target_course: https://www.trainingint.com/writing-professional-emails
+      - slug: importance-of-written-communication-at-work
+        primary_keyword: importance of written communication
+        status: scheduled
+        published_at: 2026-05-22
+        target_course: https://www.trainingint.com/writing-professional-emails
+
+      # ── Cluster B: Communicate with Confidence ───────────────────────────
+      - slug: how-to-speak-confidently-in-meetings
+        primary_keyword: how to speak confidently in meetings
+        status: published
+        published_at: 2026-04-30
+        target_course: https://www.trainingint.com/communicate-with-confidence
+        url: https://softskills.sg/blog/how-to-speak-confidently-in-meetings/
+      - slug: how-to-prepare-for-an-important-meeting
+        primary_keyword: how to prepare for a meeting
+        status: scheduled
+        published_at: 2026-05-29
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: how-to-disagree-respectfully-at-work
+        primary_keyword: how to disagree at work
+        status: draft
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: what-is-executive-presence
+        primary_keyword: what is executive presence
+        status: backlog
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: how-to-give-a-status-update-to-your-boss
+        primary_keyword: how to give a status update
+        status: draft
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: how-to-communicate-effectively-with-clients
+        primary_keyword: how to communicate with clients
+        status: scheduled
+        published_at: 2026-06-08
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: how-to-build-confidence-for-public-speaking
+        primary_keyword: how to build confidence for public speaking
+        status: draft
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: how-to-stop-saying-um-and-uh
+        primary_keyword: how to stop saying um and uh
+        status: draft
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: importance-of-verbal-communication-at-work
+        primary_keyword: importance of verbal communication
+        status: scheduled
+        published_at: 2026-05-20
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: how-to-improve-verbal-communication-skills
+        primary_keyword: how to improve verbal communication
+        status: draft
+        target_course: https://www.trainingint.com/communicate-with-confidence
+      - slug: how-to-use-pauses-in-public-speaking
+        primary_keyword: pauses in public speaking
+        status: draft
+        target_course: https://www.trainingint.com/communicate-with-confidence
+
+      # ── Cluster C: Delivering Impactful Business Presentations ───────────
+      - slug: how-to-structure-a-business-presentation
+        primary_keyword: how to structure a business presentation
+        status: draft
+        target_course: https://www.trainingint.com/business-presentation-skills-training-singapore
+      - slug: how-to-handle-q-and-a-after-presentation
+        primary_keyword: how to handle q and a after a presentation
+        status: draft
+        target_course: https://www.trainingint.com/business-presentation-skills-training-singapore
+      - slug: presentation-skills-for-engineers-singapore
+        primary_keyword: presentation skills for engineers singapore
+        status: draft
+        target_course: https://www.trainingint.com/business-presentation-skills-training-singapore
+      - slug: how-to-give-virtual-presentations-singapore
+        primary_keyword: virtual presentation skills
+        status: draft
+        target_course: https://www.trainingint.com/business-presentation-skills-training-singapore
+      - slug: how-to-open-a-business-presentation
+        primary_keyword: how to open a business presentation
+        status: draft
+        target_course: https://www.trainingint.com/business-presentation-skills-training-singapore
+      - slug: how-to-present-to-senior-leadership
+        primary_keyword: how to present to senior leadership
+        status: draft
+        target_course: https://www.trainingint.com/business-presentation-skills-training-singapore
+      - slug: presentation-lessons-from-steve-jobs
+        primary_keyword: presentation lessons from steve jobs
+        status: draft
+        target_course: https://www.trainingint.com/business-presentation-skills-training-singapore
+      - slug: how-to-prepare-for-a-ted-talk
+        primary_keyword: how to prepare for a ted talk
+        status: scheduled
+        published_at: 2026-06-05
+        target_course: https://www.trainingint.com/business-presentation-skills-training-singapore
+
+  P2:
+    name: Leadership & Management
+    hub_slug: leadership-and-management
+    hub_keyword: leadership training singapore
+    note: |
+      No approved trainingint WSQ course maps to P2 yet, so the trainingint
+      CTA is deferred until a leadership-specific WSQ course is approved. The
+      softskills.sg flagship below still applies for internal linking.
+    flagship_courses:
+      softskills_sg: https://softskills.sg/developing-new-managers/
+    posts: []
+
+  P3:
+    name: Emotional Intelligence
+    hub_slug: emotional-intelligence
+    hub_keyword: emotional intelligence training singapore
+    note: |
+      No approved trainingint WSQ course maps to P3 yet; the trainingint CTA
+      is deferred until an EQ WSQ course is approved. Legacy content kept for
+      SEO juice. The softskills.sg flagship below still applies for internal
+      linking.
+    flagship_courses:
+      softskills_sg: https://softskills.sg/building-emotional-intelligence/
+    posts: []
+    migrated:
+      - slug: how-to-achieve-work-life-balance
+        primary_keyword: how to achieve work life balance
+        status: published
+        published_at: 2016-10-01
+        url: https://softskills.sg/how-to-achieve-work-life-balance/
+        target_course: https://www.trainingint.com/communicate-with-confidence
+        notes: Legacy WP article (2016), audited 2026-05-01, optimized 2026-05-02 (CTA card + FAQ).
+
+  P4:
+    name: Productivity & Thinking
+    hub_slug: productivity-and-thinking
+    hub_keyword: time management training singapore
+    flagship_courses:
+      softskills_sg: https://softskills.sg/effective-time-management/
+      trainingint:
+        - https://www.trainingint.com/time-management
+    posts:
+      # ── Cluster: Time Management ─────────────────────────────────────────
+      - slug: how-to-manage-time-at-work
+        primary_keyword: how to manage time at work
+        status: draft
+        target_course: https://www.trainingint.com/time-management
+      - slug: how-to-prioritise-tasks-at-work
+        primary_keyword: how to prioritise tasks
+        status: scheduled
+        published_at: 2026-05-08
+        target_course: https://www.trainingint.com/time-management
+      - slug: how-to-stop-procrastinating-at-work
+        primary_keyword: how to stop procrastinating
+        status: scheduled
+        published_at: 2026-05-03
+        target_course: https://www.trainingint.com/time-management
+      - slug: time-blocking-for-singapore-professionals
+        primary_keyword: time blocking
+        status: scheduled
+        published_at: 2026-05-04
+        target_course: https://www.trainingint.com/time-management
+      - slug: how-to-say-no-to-meetings-politely
+        primary_keyword: how to say no to a meeting
+        status: draft
+        target_course: https://www.trainingint.com/time-management
+    migrated:
+      - slug: how-to-achieve-your-goals
+        primary_keyword: how to achieve your goals
+        status: published
+        published_at: 2016-10-13
+        url: https://softskills.sg/how-to-achieve-your-goals/
+        target_course: https://www.trainingint.com/communicate-with-confidence
+        notes: Legacy WP article (2016), SMART goal-setting pillar piece. Audited 2026-05-01, optimized 2026-05-02 (CTA card + FAQ).
+      - slug: how-can-you-improve-your-soft-skills
+        primary_keyword: how to improve soft skills
+        status: published
+        published_at: 2016-10-24
+        url: https://softskills.sg/how-can-you-improve-your-soft-skills/
+        target_course: https://www.trainingint.com/communicate-with-confidence
+        notes: Legacy WP article (2016) — site-wide entry/hub piece linking to all clusters. Audited 2026-05-01, optimized 2026-05-02 (CTA card + FAQ).
+
+  P5:
+    name: Customer Service
+    hub_slug: customer-service
+    hub_keyword: customer service training singapore
+    flagship_courses:
+      softskills_sg: https://softskills.sg/ultimate-customer-service/
+      trainingint:
+        - https://www.trainingint.com/uplifting-customer-service-culture
+    posts:
+      # ── Cluster: Uplifting Customer Service ──────────────────────────────
+      - slug: how-to-handle-an-angry-customer
+        primary_keyword: how to handle an angry customer
+        status: scheduled
+        published_at: 2026-05-06
+        target_course: https://www.trainingint.com/uplifting-customer-service-culture
+      - slug: how-to-de-escalate-a-customer-complaint
+        primary_keyword: how to de-escalate a customer
+        status: scheduled
+        published_at: 2026-05-18
+        target_course: https://www.trainingint.com/uplifting-customer-service-culture
+      - slug: how-to-write-a-customer-service-email
+        primary_keyword: how to write a customer service email
+        status: scheduled
+        published_at: 2026-06-03
+        target_course: https://www.trainingint.com/uplifting-customer-service-culture
+      - slug: customer-service-phone-etiquette-singapore
+        primary_keyword: customer service phone etiquette
+        status: draft
+        target_course: https://www.trainingint.com/uplifting-customer-service-culture
+      - slug: service-recovery-paradox-explained
+        primary_keyword: service recovery paradox
+        status: scheduled
+        published_at: 2026-05-15
+        target_course: https://www.trainingint.com/uplifting-customer-service-culture
+      - slug: how-to-build-long-term-client-relationships
+        primary_keyword: how to build long term client relationships
+        status: draft
+        target_course: https://www.trainingint.com/uplifting-customer-service-culture
+      - slug: how-to-say-no-to-a-customer
+        primary_keyword: how to say no to a customer
+        status: scheduled
+        published_at: 2026-05-27
+        target_course: https://www.trainingint.com/uplifting-customer-service-culture
+      - slug: how-to-reply-to-a-difficult-customer-email
+        primary_keyword: how to reply to a difficult customer
+        status: draft
+        target_course: https://www.trainingint.com/uplifting-customer-service-culture
+
+  P6:
+    name: Negotiation
+    hub_slug: negotiation
+    hub_keyword: negotiation skills training singapore
+    flagship_courses:
+      softskills_sg: https://softskills.sg/effective-business-negotiation-wsq-funded/
+      trainingint:
+        - https://www.trainingint.com/wsq-negotiation-course-singapore
+    posts:
+      # ── Cluster: Effective Negotiation Skills ────────────────────────────
+      - slug: how-to-negotiate-salary-singapore
+        primary_keyword: how to negotiate salary singapore
+        status: draft
+        target_course: https://www.trainingint.com/wsq-negotiation-course-singapore
+      - slug: how-to-negotiate-with-difficult-clients
+        primary_keyword: how to negotiate with difficult clients
+        status: draft
+        target_course: https://www.trainingint.com/wsq-negotiation-course-singapore
+      - slug: negotiation-tactics-for-procurement
+        primary_keyword: negotiation tactics for procurement
+        status: draft
+        target_course: https://www.trainingint.com/wsq-negotiation-course-singapore
+      - slug: how-to-say-no-at-work
+        primary_keyword: how to say no at work
+        status: scheduled
+        published_at: 2026-05-25
+        target_course: https://www.trainingint.com/wsq-negotiation-course-singapore
+      - slug: batna-explained-singapore-professionals
+        primary_keyword: what is batna
+        status: scheduled
+        published_at: 2026-05-13
+        target_course: https://www.trainingint.com/wsq-negotiation-course-singapore
+      - slug: how-to-win-a-tender-bid-singapore
+        primary_keyword: how to win a tender bid
+        status: draft
+        target_course: https://www.trainingint.com/wsq-negotiation-course-singapore
+      - slug: how-to-win-a-negotiation-without-revealing-too-much
+        primary_keyword: how to win a negotiation
+        status: draft
+        target_course: https://www.trainingint.com/wsq-negotiation-course-singapore

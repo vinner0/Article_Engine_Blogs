@@ -1,0 +1,27 @@
+# Per-pass budget caps for blog-5-audit-existing.
+# If a pass would exceed any cap, abort and flag for manual review.
+internal_links_max: 4
+images_max: 3
+freshness_edits_max: 10
+
+# External link checking
+http_timeout_ms: 8000
+http_max_redirects: 5
+http_retries: 2
+
+# Internal link relevance scoring
+relevance_min_score: 0.35  # tune during dogfooding
+relevance_weights:
+  shared_tag: 0.4
+  title_keyword_overlap: 0.3
+  h2_keyword_overlap: 0.2
+  same_pillar: 0.1
+
+# Image targets
+words_per_image: 400
+require_above_fold_image: true
+
+# Sitemaps to crawl for course-page candidates
+external_sitemaps:
+  - https://www.intellisoft.com.sg/sitemap.xml
+  - https://www.trainingint.com/sitemap.xml
