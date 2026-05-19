@@ -26,17 +26,31 @@ Stage 8 for `$ARGUMENTS` on trainingint.com.
    primary_keyword and a course_url; else REFUSE.
 
 ## Publish (single idempotent call)
-scheduled_iso = next free weekday 09:00 slot from status/trainingint.yaml (5/wk Mon–Fri).
-Run python that: loads config + credentials/.env, builds WPClient, reads 04-seo.html,
-then calls scripts.wp_publish.publish_article(wp, content_uid('trainingint',slug), slug,
+**Derive the call inputs from `04-seo.html`'s frontmatter (do not invent them):**
+- `title` = frontmatter `title`; `description` = frontmatter `description`; `html` = the `04-seo.html` body (post-frontmatter).
+- `featured_path` = `content/trainingint/<slug>/images/<heroImage>` where `heroImage` is the frontmatter field.
+- `seo_meta` = a dict keyed by the ACTIVE plugin from `probe.seo_plugin`:
+  `yoast` → `{"_yoast_wpseo_title": title, "_yoast_wpseo_metadesc": description}`;
+  `rankmath` → `{"rank_math_title": title, "rank_math_description": description}`;
+  `none` → `{}` (no plugin meta).
+- `tags` = keyword-derived tag names from `_research/cluster.md` (or omit / `None`).
+- `scheduled_iso` = next free weekday 09:00 Singapore (UTC+8) slot, reading existing
+  `scheduled_date` entries in `status/trainingint.yaml` (cadence 5/wk Mon–Fri).
+  **If `status/trainingint.yaml` does not exist yet, treat it as empty — the first
+  slot is the next weekday 09:00 SGT.**
+
+Run python that loads config + credentials/.env, builds WPClient, then calls
+scripts.wp_publish.publish_article(wp, content_uid('trainingint',slug), slug,
 title, html, seo_meta, scheduled_iso, probe.default_category_id, probe.default_author_id,
-featured_path=<hero image>, status_map=<status/trainingint.yaml>,
+featured_path=<hero image>, status_map=<status/trainingint.yaml dict, or None if absent>,
 seo_meta_rest_writable=probe.seo_meta_rest_writable,
-tags=<keyword-derived tag ids/names, or omit>,
+tags=<derived tags or omit>,
 images_dir=content/trainingint/<slug>/images/ ). Idempotent: rerun UPDATES, never
 duplicates (helper /ae/v1/find + adversarial-tested in scripts/wp_publish.py).
 Inline `ae:img:<file>` placeholders + the hero are uploaded to WP media and rewritten
 to live URLs (spec §8.2); `tags` set alongside category/author (spec §8.3).
+If `seo_meta_rest_writable` is false, publish_article routes `seo_meta` through the
+helper `/ae/v1/meta` route automatically (spec §8.4).
 
 ## After publish
 Update status/trainingint.yaml: slug → {status: scheduled, scheduled_date, wp_post_id}.

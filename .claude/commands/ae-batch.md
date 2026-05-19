@@ -10,8 +10,10 @@ Batch for `$ARGUMENTS` on trainingint.com.
 ## Process
 1. Resolve slugs: if a course id, take that course's `status: idea` slugs from
    courses/trainingint.yaml (SKIP `status: proposed` — quarantined per spec §6). Cap 15.
-2. Per slug in order: /ae-1 → /ae-2 → /ae-3 → /ae-4. Parallel sub-agents per slug
-   where independent (softskills pattern). Each stage writes its artifact before next; resumable.
+2. **Slugs run concurrently as one sub-agent per slug (softskills batch pattern); stages
+   WITHIN a slug run sequentially** /ae-1 → /ae-2 → /ae-3 → /ae-4 (each stage writes its
+   artifact before the next; resumable). Slugs are independent so their sub-agents do not
+   share state. If sub-agent fan-out is unavailable, fall back to sequential per slug.
 3. **STOP at the human review gate.** Print a table: slug | title | primary_keyword |
    content/trainingint/<slug>/_draft/03-voice.md. Tell the owner: edit each 03-voice.md;
    then per accepted slug run /ae-6-seo-pass <slug> then /ae-8-publish <slug>.
