@@ -12,7 +12,7 @@
 
 **v2 changes (from independent plan audit 2026-05-19):** B1/B2 — port transforms made deterministic, verify steps aligned to real source strings. M3 — idempotency reworked: an **always-installed** helper plugin registers `ae_content_uid` (show_in_rest) and a server-side `/ae/v1/find` route, because stock WP REST cannot query unregistered meta and silently drops it. M4 — Task 11 now uploads featured media + resolves internal links. M5 — ae-8 hard-gates on all required probe fields. M6/M7/M8 — ae-6 link-section retargeted to trainingint; Bash-tool note; jsonld gets a real adversarial test.
 
-**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan).
+**v2.1 fixes (second adversarial pre-build audit 2026-05-19, source-file-verified):** **B1** Task 12 sed now also rewrites the *bare* `pillar-map.yaml` (blog-1 L45 had it un-prefixed; the Step-3 verify-grep matched it but the old sed didn't → gate would false-fail 100%). **m1** Task 13 sed adds `softskills_sg→trainingint` so the `! grep softskills` verify is deterministic regardless of the prose-replace (blog-6 L40 `?utm_source=softskills_sg`). **M1** `seo_plugin_emits_graph` (spec §9.3) was declared but never populated/gated → ae-6 `suppress=` was dead; now an owner-filled probe field gated in Task 14 gate 1 + Task 15 Step 1. **M2** spec §8.2 inline images had no implementing step (live posts would 404 inline `<img>`); Task 11 gains `resolve_inline_media` (ae:img: placeholder → uploaded WP media URL) + test, ae-6 emits the placeholders, ae-8 passes `images_dir`. **M3** spec §8.3 `tags` never set; Task 11 `publish_article` gains `tags=` + test, ae-8 passes it. **N1 (per-task quality review, Task 4)** `scripts/lib/ngram._norm` tokenized HTML tags/entities as words, so the §7.1 voice-damage gate `voice_survival_ratio(04-seo.html, 03-voice.md) ≥ 0.85` (Task 13/14) would false-positive and block *every* article; `voice_survival_ratio` also used a list (dup) denominator and `overlap_8gram` returned dups. Fixed: `_norm` strips tags + `html.unescape` + NFKD-ascii fold (prose-not-markup, plain-text no-op); voice denominator = distinct shingles; overlap deduped. New ADVERSARIAL test encodes the real HTML-vs-markdown calling convention (the original plain-string-only suite was the blind spot that hid this through a "post-audit verified" plan). **N2 (per-task quality review, Task 5)** same defect class in `scripts/lib/originality.py`: `_has_framework` matched only markdown `1./-/*` so it returned False on the real HTML `04-seo.html` (silently degrading the ≥2-of-4 gate); `_has_stat` matched any >6-char fragment so non-numeric `stats.md` lines (course names, bio, headers) false-passed; `_has_analogy` fired on "like you"; `_has_story` matched YAML-key noise. Fixed: framework counts HTML `<li>` + markdown; stat requires a digit; analogy requires a `like a/an/the` simile (or explicit cue); story skips YAML/header/blockquote lines. New real-input adversarial tests (real voice files + HTML article). **C2a left for owner:** `_has_story` is still verbatim-prefix (won't detect paraphrased signature stories) — flagged in Task 5 for an owner design decision, deliberately NOT auto-redesigned.
 
 **Reuse-verification (filesystem-checked + audit-confirmed 2026-05-19):** `D:/VP/BLOG_AUDIT/` = 0 Python, nothing forked. Verified sources used: softskills `.claude/commands/blog-{1,2,3,4,6,8}-*.md`, `voice/*.md` (6), `seo/{checklist,link-budget,schema-templates}.md + audit-budgets.yaml + pillar-map.yaml`. Audit confirmed all exist; transform strings below were checked against the real files.
 
@@ -283,9 +283,11 @@ def voice_survival_ratio(seo_text, voice_text, n=8):
 
 **Files:** Create `scripts/lib/originality.py`, `tests/test_originality.py`
 
-- [ ] **Step 1: Failing tests (incl. adversarial)** — `tests/test_originality.py`:
+- [ ] **Step 1: Failing tests (incl. adversarial + real-input regression — N2)** — `tests/test_originality.py`:
 ```python
+import pathlib
 from scripts.lib.originality import originality_report
+ROOT=pathlib.Path(__file__).resolve().parents[1]
 STORIES="A trainee once emailed the whole company by mistake. We laughed, then fixed it."
 STATS="24 years training in Singapore. 48,000+ working professionals trained."
 def test_passes_story_and_stat():
@@ -301,31 +303,66 @@ def test_no_op_pass_stub_fails():     # ADVERSARIAL: {"passes":True} stub fails 
     art="nothing original here at all just filler words repeated repeated"
     r=originality_report(art, STORIES, STATS, [art])
     assert not r["passes"]
+def test_real_inputs_html_article():  # ADVERSARIAL: real call site passes 04-seo.html
+    stories=(ROOT/"voice/stories.md").read_text(encoding="utf-8")
+    stats=(ROOT/"voice/stats.md").read_text(encoding="utf-8")
+    html=("<article><h2>Steps</h2><ol>"
+          "<li>Define the one outcome the email must achieve</li>"
+          "<li>Write the ask in the first two sentences</li>"
+          "<li>Cut every sentence that does not serve that ask</li>"
+          "</ol><p>Think of a good email like a one-page memo.</p></article>")
+    r=originality_report(html, stories, stats,
+                         ["totally unrelated competitor prose about kittens here"])
+    assert r["checks"]["original_framework"] is True   # HTML <ol> must count (pre-fix: False)
+    assert r["checks"]["original_analogy"] is True      # "like a one-page memo"
+def test_course_name_alone_does_not_pass(): # ADVERSARIAL: stat needs a digit; "like you" != simile
+    stories=(ROOT/"voice/stories.md").read_text(encoding="utf-8")
+    stats=(ROOT/"voice/stats.md").read_text(encoding="utf-8")
+    art=("Our course Communicate with Confidence helps professionals like you "
+         "improve at work and grow in their roles over time consistently here today.")
+    r=originality_report(art, stories, stats,
+                         ["unrelated competitor text about an entirely different subject"])
+    assert r["passes"] is False   # pre-fix: stat(course name)+analogy("like you") => True
 ```
 - [ ] **Step 2: Run, verify fail** — FAIL.
-- [ ] **Step 3: Implement** — `scripts/lib/originality.py`:
+- [ ] **Step 3: Implement** — `scripts/lib/originality.py` (v2.1 N2: HTML-aware framework, numeric-only stat, prose-only story lines, simile-only analogy — see v2.1 fixes note):
 ```python
 import re
 from scripts.lib.ngram import overlap_8gram
+# YAML key / markdown header / blockquote — not story prose (skip in _has_story)
+_KEYISH=re.compile(r"^\s*(#|>|[\w-]+\s*:(\s|$))")
+def _story_lines(stories):
+    for raw in stories.splitlines():
+        ln=raw.strip(" -*")
+        if ln and not _KEYISH.match(raw): yield ln
 def _has_story(a, stories):
-    for ln in (l.strip(" -*") for l in stories.splitlines()):
-        if len(ln)>30 and ln[:30].lower() in a.lower(): return True
+    al=a.lower()
+    for ln in _story_lines(stories):
+        if len(ln)>30 and ln[:30].lower() in al: return True
     return False
 def _has_stat(a, stats):
+    al=a.lower()
     for ln in (l.strip(" -*") for l in stats.splitlines()):
         frag=ln.split(".")[0].strip()
-        if len(frag)>6 and frag.lower() in a.lower(): return True
+        # a real stat is numeric — exclude course names / bio / headers
+        if len(frag)>6 and any(ch.isdigit() for ch in frag) and frag.lower() in al:
+            return True
     return False
 def _has_analogy(a, serp):
     for s in a.replace("\n"," ").split("."):
-        if any(c in s.lower() for c in ("like ","is like","think of it as","imagine ","as if ")):
+        sl=s.lower()
+        if (re.search(r"\blike (a|an|the) ", sl)
+                or any(c in sl for c in ("is like","think of it as","imagine ","as if "))):
             if not any(overlap_8gram(s,b) for b in serp): return True
     return False
+def _framework_block(a):
+    # article at the real call site is 04-seo.html — count HTML <li> AND markdown
+    md=[l for l in a.splitlines() if re.match(r"\s*(\d+\.|\-|\*)\s+\S", l)]
+    li=re.findall(r"<li\b[^>]*>(.*?)</li>", a, re.DOTALL|re.IGNORECASE)
+    return ("\n".join(md)+"\n"+"\n".join(li)).strip()
 def _has_framework(a, serp):
-    if re.search(r"(?m)^\s*(\d+\.|\-|\*)\s+\S", a):
-        block="\n".join(l for l in a.splitlines() if re.match(r"\s*(\d+\.|\-|\*)\s+\S", l))
-        return bool(block) and not any(overlap_8gram(block,b) for b in serp)
-    return False
+    block=_framework_block(a)
+    return bool(block) and not any(overlap_8gram(block,b) for b in serp)
 def originality_report(article, stories_md, stats_md, serp_bodies):
     c={"story":_has_story(article,stories_md),"stat":_has_stat(article,stats_md),
        "original_analogy":_has_analogy(article,serp_bodies),
@@ -333,7 +370,8 @@ def originality_report(article, stories_md, stats_md, serp_bodies):
     n=sum(c.values())
     return {"passes": n>=2, "count": n, "checks": c}
 ```
-- [ ] **Step 4: Run, verify pass** — PASS (3).
+> **Plan-level decision flagged for owner (C2a, NOT auto-changed):** `_has_story` still uses a verbatim 30-char-prefix match (consistent with voice/sync.md "facts verbatim, never paraphrased"). It will NOT detect a heavily *paraphrased* signature story. Decide whether the originality gate should require near-verbatim signature stories (current) or detect paraphrased retellings (would need fuzzy/8-gram similarity on the story `long:` body). Left as-is pending owner call.
+- [ ] **Step 4: Run, verify pass** — PASS (5, incl. the HTML-article + course-name regression tests that bite the pre-v2.1 impl).
 - [ ] **Step 5: Commit** — `git add scripts/lib/originality.py tests/test_originality.py && git commit -m "feat: >=2-of-4 originality gate (adversarial-tested)"`
 
 ---
@@ -1103,6 +1141,8 @@ No spec requirement is matched to a task name only; each maps to a concrete step
 - ngram `test_voice_survival_html_vs_markdown_not_false_blocked`: the pre-v2.1 non-stripping `_norm` scores ~0.4 on identical prose in HTML-vs-md → `>= 0.85` fails. ✅ bites the original plan code (the defect the quality gate caught).
 - ngram `test_overlap_dedupes_repeated_match`: list-returning (dup) overlap → `len(o)==len(set(o))` fails. ✅
 - originality `test_no_op_pass_stub_fails`: stub `{"passes":True}` → `assert not r["passes"]` fails. ✅
+- originality `test_real_inputs_html_article`: pre-v2.1 `_has_framework` returns False on HTML `<ol>` → `assert checks["original_framework"] is True` fails. ✅ bites the original plan code (the N2 defect the quality gate caught).
+- originality `test_course_name_alone_does_not_pass`: pre-v2.1 stat matches a non-numeric course name + analogy fires on "like you" → `passes` True → `assert passes is False` fails. ✅
 - link_budget `test_too_many_primary_occurrences`: stub `return []` → `any("primary_course_occurrences"...)` fails. ✅
 - jsonld `test_suppress_skips_node`: stub ignoring `suppress` still emits FAQPage → `assert "FAQPage" not in types` fails (M8 fixed — was weak). ✅
 - probe `test_meta_writable_false_on_mismatch` + `test_uid_roundtrip_false_when_find_misses`: hardcoded-True stubs fail (readback/​find mismatch). ✅
