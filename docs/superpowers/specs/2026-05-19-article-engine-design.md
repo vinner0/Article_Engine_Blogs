@@ -29,10 +29,12 @@ For any registered WordPress site:
 |---|---|---|---|
 | D1 | Run model | External Python engine + WP REST push | **Conditional** — see D1′ |
 | D1′ | REST-write contingency | If P0 proves SEO-plugin meta is **not** writable via external REST + app password, a **mandatory thin helper plugin** per site is added. D1's "no plugin" is not guaranteed; it is decided by the P0 probe. | New (audit F2) |
-| D2 | Publish autonomy | Auto-generate → WP **draft**; human reviews **and edits** before publish | Strengthened: the human gate is a *genuine edit pass*, not a 1-click rubber stamp — this is the real scaled-content-abuse defence (audit F4) |
+| D2 | Publish autonomy | Auto-generate → WP post `status=future` + scheduled date; owner does a **genuine edit pass** in wp-admin before/at the scheduled day | Owner explicitly accepted (2026-05-19) that penalty protection depends on a real edit, not a 1-click stamp (audit F4, §7.1) |
 | D3 | Content model | Cluster per course (~5) + full keyword/SERP research | unchanged |
 | D4 | v1 scope | trainingint.com first; multi-site-ready architecture | unchanged |
 | D5 | Build strategy | New standalone project; reuse is **design + content data**, not code | Reframed (audit F1) |
+| D6 | Cadence | **5/week, weekdays**, per site (configurable) | Owner choice 2026-05-19 |
+| D7 | LLM provider | **OpenAI API** (owner has a key) via net-new `ai_provider.py` factory; Anthropic API optional alt | Owner choice 2026-05-19. Engine is *unattended* → needs a programmatic API; cannot be Claude-Code-agent-driven like softskills (§3.1) |
 
 ## 3. Reuse reality (filesystem-verified 2026-05-19)
 
@@ -51,6 +53,12 @@ Every row below was checked against the actual filesystem by an independent audi
 | "softskills MDX already links to trainingint course URLs" | `…/how-to-communicate-effectively-with-clients/index.mdx` | **True** | DATA point | De-risks **content strategy only** — not WP integration (audit F8). |
 
 **Build baseline:** ~70% net-new Python. Genuine reuse = voice rule files, SEO checklist, link-budget, schema templates, course topology (all DATA), plus stage/prompt designs (DESIGN). No forkable code exists. All downstream phases (Section 14) and cost (Section 13) are derived from this baseline.
+
+### 3.1 How softskills was generated — and why this engine's execution model is different (category distinction, not reuse)
+
+Filesystem-verified 2026-05-19: softskills' `blog-1…8` are **Claude Code slash-command prompts** ("You are running Stage 3…", "wait for their go-ahead"). softskills articles were produced by a **human running Claude Code interactively**, in batch sessions, with parallel sub-agents, reviewing between stages; output as MDX committed to git; Coolify rebuilds Astro daily and future-dated posts surface. The only API key in softskills `.env` is `PEXELS_API_KEY`. There was **no OpenAI/Anthropic API key** — LLM cost was bundled Claude Code usage; "daily" was Coolify *surfacing* pre-written content, not daily *generation*.
+
+The Article Engine's requirement is the opposite: **unattended daily generation** via Task Scheduler/cron. Claude Code is interactive-agentic and not cleanly cron-callable, so the softskills *execution model is not reusable* — only its stage *prompt design* is. The engine therefore uses a **programmatic LLM API**: `ai_provider.py` (net-new, factory pattern mirroring is-auto-seo's PHP design) defaults to **OpenAI** (owner has a key, D7); an Anthropic-API provider is an optional alternative. This distinction is called out explicitly so the implementation plan does not mistake softskills' agent-driven workflow for a runnable unattended pipeline (related to the spec's standing rule: verify execution reality, do not infer it from a prior project's artifacts).
 
 ## 4. Non-goals
 
@@ -214,7 +222,8 @@ A daily × multi-site autonomous LLM loop is an open-ended recurring liability a
 - **Per-run token ceiling** in `costguard.py`; a run exceeding it aborts and emails before continuing (kills prompt-loop runaways, e.g. iterative-fix loops).
 - **Per-site and global monthly USD budget** in `sites.yaml`; on breach the daily run refuses until the next month or a manual override.
 - Every run's tokens + USD logged to `runs` and shown in the digest.
-- **Order-of-magnitude estimate (to refine with a measured first article, not deferred):** ~6 LLM stages over long-form input/output ≈ low-single-digit USD per article at current Opus pricing; ~3/week/site ≈ low-tens USD/site/month; linear in active sites. If the measured first article diverges >2× from this, the cadence/model choice is revisited before scaling.
+- **Provider = OpenAI API** (D7), not Claude-Opus-via-subscription — the cost basis is metered OpenAI tokens. A GPT-4-class model over ~6 LLM stages of long-form I/O is plausibly **well under US$1/article**; at **5/week/site (~22/month)** that is order **single-digit-to-low-tens USD/site/month**, linear in active sites. Measured against article #1 before scaling; if >2× the estimate, model/stage mix is revisited.
+- **Ceiling:** owner to confirm a per-site/global monthly USD figure (§15 Q3). Until confirmed, the plan proceeds with a **provisional US$50/site/month** hard cap and per-article cost logged from article #1, so the real number sets the final ceiling with evidence.
 
 ## 14. Build phases (re-derived from the true ~70%-net-new baseline)
 
@@ -227,14 +236,14 @@ A daily × multi-site autonomous LLM loop is an open-ended recurring liability a
 | P4 | `digest` + Task Scheduler + 24h failure alert | One article/day lands as a draft unattended for a week; a forced failure produces an alert |
 | P5 | Multi-site proof | One more site added via config + P0 only; first draft lands there |
 
-## 15. Open questions for owner
+## 15. Owner decisions
 
-1. Cadence per site for v1 (softskills used 3/week MWF)?
-2. `status=draft` (publish anytime) vs `status=future`+date (auto-live on the day after owner approves the queue)?
-3. Per-site vs global monthly USD budget figures (Section 13)?
-4. Shared voice rule files across all sites, or per-site overrides from day 1?
-5. trainingint blog URL structure / category taxonomy to target.
-6. Does the owner accept that D2's penalty protection depends on a *genuine edit pass*, not a 1-click publish (Section 7.1)?
+**Resolved 2026-05-19:** cadence = 5/week weekdays (D6) · publish model = `status=future`+scheduled date (D2) · genuine-edit discipline accepted (D2/§7.1) · LLM provider = OpenAI API via owner's key (D7).
+
+**Still open (do not block P0/P1; needed by P3/P5):**
+1. Monthly USD ceiling figure — provisional **US$50/site/month** until article-#1 cost is measured (§13); confirm or adjust.
+2. Shared voice rule files across all sites, or per-site overrides from day 1?
+3. trainingint blog URL structure / category taxonomy to target (also resolved empirically by the P0 probe, §11.5).
 
 ---
 
