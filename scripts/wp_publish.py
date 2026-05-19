@@ -19,9 +19,11 @@ def resolve_internal_links(html, status_map):
         unresolved.append(slug)
         return 'data-ae-unresolved="1"'
     html=re.sub(r'href="ae:sibling:([^"]+)"', repl, html)
-    # turn any anchor we could not resolve into plain text (drop the <a> wrapper)
-    for slug in set(unresolved):
-        html=re.sub(r'<a [^>]*data-ae-unresolved="1"[^>]*>(.*?)</a>', r'\1', html, count=1)
+    # Drop EVERY unresolved anchor's <a> wrapper -> plain text. Global (not
+    # count=1: the same slug can appear 2+ times) and DOTALL (anchor text may
+    # span newlines / wrap <strong>). Never ship a broken href-less <a> (§8.5).
+    html=re.sub(r'<a [^>]*data-ae-unresolved="1"[^>]*>(.*?)</a>', r'\1', html,
+                flags=re.DOTALL)
     return html, unresolved
 
 def upload_featured(wp, image_path):
