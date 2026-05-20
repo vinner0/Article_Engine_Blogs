@@ -4,3 +4,9 @@ __pycache__/
 .pytest_cache/
 content/
 imports/
+
+# Local working copies of production server files (edit-then-upload — never tracked)
+.htaccess
+.htaccess_backup
+wp-config.php
+wp-helper-plugin.zip

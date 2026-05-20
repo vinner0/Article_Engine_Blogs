@@ -4,7 +4,14 @@ sites:
     wp_api_base: https://www.trainingint.com/wp-json/wp/v2
     ae_api_base: https://www.trainingint.com/wp-json/ae/v1
     app_password_env: WP_TRAININGINT
-    cadence: { per_week: 5, days: [Mon,Tue,Wed,Thu,Fri] }
+    cadence:
+      per_week: 5
+      days:
+      - Mon
+      - Tue
+      - Wed
+      - Thu
+      - Fri
     link_budget:
       internal_sibling_min: 2
       internal_sibling_max: 3
@@ -13,16 +20,16 @@ sites:
       secondary_course_max: 3
       authoritative_outbound_min: 1
       authoritative_outbound_max: 2
-    probe:                       # filled by scripts/probe.py — do NOT hand-edit auto fields
-      rest_ok: null
-      seo_plugin: null           # yoast | rankmath | none
-      seo_meta_rest_writable: null
-      seo_plugin_emits_graph: null
-      uid_roundtrip_ok: null     # idempotency mechanism verified on live site
-      html_renders_ok: null      # manual (Task 15 Step 1)
-      wpcron_reliable: null       # manual
-      default_category_id: null   # manual
-      default_author_id: null     # manual
-      media_max_bytes: null
-      keyword_data: null          # ubersuggest_csv | ai_only
-      probed_at: null
+    probe:
+      rest_ok: true
+      seo_plugin: yoast            # manual override 2026-05-20: detect_seo_plugin returned "none" because Yoast doesn't show_in_rest=true its meta keys; confirmed yoast via active_plugins debug + verify_yoast_helper.py probe. See observation log.
+      seo_meta_rest_writable: false  # correct: Yoast meta isn't REST-writable; publish flow routes via /ae/v1/meta (verified on live).
+      seo_plugin_emits_graph: true   # verified 2026-05-20: <script class="yoast-schema-graph"> with @graph array present on homepage. ae-6 must suppress its own Article/Breadcrumb/Organization JSON-LD to avoid duplication.
+      uid_roundtrip_ok: true
+      html_renders_ok: true          # site is live and renders normally; revisit if PHP errors appear.
+      wpcron_reliable: true          # owner: default pseudo-cron acceptable on this site (steady traffic). If scheduled posts start missing, switch to real cron via Hostinger hPanel.
+      default_category_id: 175       # soft-skills (5 existing posts) — matches first cluster (writing-professional-emails) and most planned business-skills content.
+      default_author_id: 1           # itpladmin / Vinai Prakash.
+      media_max_bytes: 8388608       # 8 MB — binding limit from prod wp-config (post_max_size 8M, smaller than upload_max_filesize 20M).
+      keyword_data: ubersuggest_csv  # ae-1 expects an Ubersuggest CSV export per cluster.
+      probed_at: '2026-05-20'
