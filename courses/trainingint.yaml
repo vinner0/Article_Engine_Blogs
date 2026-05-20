@@ -6,12 +6,13 @@ courses:
     secondary_courses:
       - https://www.trainingint.com/communicate-with-confidence
       - https://www.trainingint.com/business-presentation-skills-training-singapore
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/suggestions_ubersuggest_how_to_write_professional_emails.csv
     cluster:
       - { slug: how-to-write-a-professional-email, primary_keyword: how to write a professional email, status: idea }
+      - { slug: how-to-write-a-formal-email, primary_keyword: how to write a formal email, status: idea }
+      - { slug: how-to-write-a-business-email, primary_keyword: how to write business emails, status: idea }
       - { slug: how-to-write-a-follow-up-email, primary_keyword: how to write a follow up email, status: idea }
-      - { slug: how-to-write-a-formal-email-to-your-boss, primary_keyword: how to write a formal email to your boss, status: idea }
       - { slug: how-to-write-an-apology-email-at-work, primary_keyword: how to write an apology email, status: idea }
-      - { slug: how-to-write-a-meeting-recap-email, primary_keyword: how to write a meeting recap email, status: idea }
 
   - id: excel
     course_url: https://www.trainingint.com/excel-training
@@ -41,3 +42,60 @@ courses:
       - { slug: how-to-use-copilot-in-word, primary_keyword: how to use copilot in word, status: scheduled }
       - { slug: how-to-use-copilot-in-powerpoint, primary_keyword: how to use copilot in powerpoint, status: scheduled }
       - { slug: how-to-use-copilot-in-teams, primary_keyword: how to use copilot in teams, status: scheduled }
+
+  - id: powerpoint
+    course_url: https://www.trainingint.com/wsq-funded-courses/wsq-basic-powerpoint-course
+    pillar: microsoft-office-skills
+    secondary_courses:
+      - https://www.trainingint.com/business-presentation-skills-training-singapore
+      - https://www.trainingint.com/word-excel-powerpoint-copilot-in-microsoft-365-office
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/suggestions_ubersuggest_how_to_use_powerpoint_powerpoint_advanced_animation_in_powerpoint.csv
+    cluster:
+      - { slug: how-to-use-powerpoint, primary_keyword: how to use powerpoint, status: idea }
+      - { slug: how-to-make-a-presentation-in-powerpoint, primary_keyword: how to use powerpoint to make a presentation, status: idea }
+      - { slug: how-to-add-animations-in-powerpoint, primary_keyword: how to put animation in powerpoint, status: idea }
+      - { slug: how-to-use-presenter-view-in-powerpoint, primary_keyword: how to use powerpoint presenter view, status: idea }
+      - { slug: advanced-powerpoint-animation-techniques, primary_keyword: animation in powerpoint, status: idea }
+
+  - id: power-bi
+    course_url: https://www.trainingint.com/analyze-visualize-with-power-bi
+    pillar: microsoft-power-platform
+    secondary_courses:
+      - https://www.trainingint.com/data-analytics-excel-powerbi-course-2
+      - https://www.trainingint.com/advanced-data-analytics-visualization-with-excel
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/suggestions_ubersuggest_power_bi_how_to_data_visualization_with_Power_BI_learning_Power_BI.csv
+    cluster:
+      - { slug: power-bi-data-visualization-guide, primary_keyword: data visualization with power bi, status: idea }
+      - { slug: power-bi-how-to-guide-for-beginners, primary_keyword: power bi how to, status: idea }
+      - { slug: how-to-export-power-bi-to-powerpoint, primary_keyword: power bi to ppt, status: idea }
+      - { slug: power-bi-quick-measures-explained, primary_keyword: power bi quick measure, status: idea }
+      - { slug: power-bi-best-practices, primary_keyword: power bi best practices, status: idea }
+
+  - id: power-automate
+    course_url: https://www.trainingint.com/powerapps-powerautomate-masterclass
+    pillar: microsoft-power-platform
+    secondary_courses:
+      - https://www.trainingint.com/create-agentic-ai-automations-without-coding
+      - https://www.trainingint.com/digital-transformation-with-ai-tools
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/suggestions_ubersuggest_how_to_use_power_automate_learn_power_automate_email_automation_with_power_automate.csv
+    cluster:
+      - { slug: how-to-use-power-automate, primary_keyword: how to use power automate, status: idea }
+      - { slug: how-to-install-power-automate-desktop, primary_keyword: how to install power automate desktop, status: idea }
+      - { slug: how-to-send-emails-with-power-automate, primary_keyword: how to use power automate to send emails, status: idea }
+      - { slug: how-to-share-a-power-automate-desktop-flow, primary_keyword: how to share power automate desktop flow, status: idea }
+
+  - id: canva
+    course_url: https://www.trainingint.com/canva-design-masterclass
+    pillar: design-tools
+    secondary_courses:
+      - https://www.trainingint.com/video-editing-with-ai-tools
+      - https://www.trainingint.com/digital-transformation-with-ai-tools
+      - https://www.trainingint.com/create-agentic-ai-automations-without-coding
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/suggestions_ubersuggest_how_to_use_canva_canva_designs_canva_mood_board.csv
+    keyword_csv_2: SEO_KEYWORD_DATA_DUMPS/suggestions_ubersuggest_canva_how_to_learn_canva_canva__posters.csv
+    cluster:
+      - { slug: how-to-use-canva, primary_keyword: how to use canva, status: idea }
+      - { slug: how-to-design-a-presentation-in-canva, primary_keyword: canva presentation, status: idea }
+      - { slug: how-to-build-a-resume-in-canva, primary_keyword: canva resume builder, status: idea }
+      - { slug: how-to-edit-pdfs-in-canva, primary_keyword: canva pdf editor, status: idea }
+      - { slug: how-to-make-money-with-canva, primary_keyword: how to use canva to make money, status: idea }
