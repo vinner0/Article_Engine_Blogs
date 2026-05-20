@@ -22,11 +22,11 @@ courses:
       - https://www.trainingint.com/power-query-power-pivot-for-deep-analysis-with-excel
     keyword_csv: SEO_KEYWORD_DATA_DUMPS/excel.csv
     cluster:
-      - { slug: how-to-create-pivot-tables-in-excel, primary_keyword: how to use excel pivot table, status: idea }
-      - { slug: how-to-filter-data-in-excel-step-by-step, primary_keyword: how to use excel filter, status: idea }
-      - { slug: how-to-use-sumif-and-sumifs-in-excel, primary_keyword: how to use excel sum function, status: idea }
-      - { slug: how-to-use-vlookup-and-xlookup-in-excel, primary_keyword: how to use excel lookup, status: idea }
-      - { slug: essential-excel-formulas-every-finance-professional-needs, primary_keyword: how to use excel formula, status: idea }
+      - { slug: how-to-create-pivot-tables-in-excel, primary_keyword: how to use excel pivot table, status: scheduled }
+      - { slug: how-to-filter-data-in-excel-step-by-step, primary_keyword: how to use excel filter, status: scheduled }
+      - { slug: how-to-use-sumif-and-sumifs-in-excel, primary_keyword: how to use excel sum function, status: scheduled }
+      - { slug: how-to-use-vlookup-and-xlookup-in-excel, primary_keyword: how to use excel lookup, status: scheduled }
+      - { slug: essential-excel-formulas-every-finance-professional-needs, primary_keyword: how to use excel formula, status: scheduled }
 
   - id: copilot
     course_url: https://www.trainingint.com/word-excel-powerpoint-copilot-in-microsoft-365-office
@@ -36,8 +36,8 @@ courses:
       - https://www.trainingint.com/digital-transformation-with-ai-tools
     keyword_csv: SEO_KEYWORD_DATA_DUMPS/copilot.csv
     cluster:
-      - { slug: how-to-use-copilot-in-excel, primary_keyword: how to use copilot in excel, status: idea }
-      - { slug: how-to-use-copilot-in-outlook, primary_keyword: how to use copilot in outlook, status: idea }
-      - { slug: how-to-use-copilot-in-word, primary_keyword: how to use copilot in word, status: idea }
-      - { slug: how-to-use-copilot-in-powerpoint, primary_keyword: how to use copilot in powerpoint, status: idea }
-      - { slug: how-to-use-copilot-in-teams, primary_keyword: how to use copilot in teams, status: idea }
+      - { slug: how-to-use-copilot-in-excel, primary_keyword: how to use copilot in excel, status: scheduled }
+      - { slug: how-to-use-copilot-in-outlook, primary_keyword: how to use copilot in outlook, status: scheduled }
+      - { slug: how-to-use-copilot-in-word, primary_keyword: how to use copilot in word, status: scheduled }
+      - { slug: how-to-use-copilot-in-powerpoint, primary_keyword: how to use copilot in powerpoint, status: scheduled }
+      - { slug: how-to-use-copilot-in-teams, primary_keyword: how to use copilot in teams, status: scheduled }

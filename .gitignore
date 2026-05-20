@@ -1,9 +1,11 @@
 credentials/.env
+.env
 __pycache__/
 *.pyc
 .pytest_cache/
 content/
 imports/
+.tmp/
 
 # Local working copies of production server files (edit-then-upload — never tracked)
 .htaccess
