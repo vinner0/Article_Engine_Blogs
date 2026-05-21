@@ -35,16 +35,16 @@ If the user requests skeleton edits, update `01-skeleton.md` and re-confirm befo
 - Primary keyword in first 100 words; secondary cluster keywords distributed naturally across H2s
 - Numbered steps / bullet lists / tables where format-appropriate (snippet bait)
 - All FAQ Q&A filled in (treat each A as 50–120 words, plain answer first then nuance)
-- All CourseCTA + AuthorBio slots present as MDX component imports (or markdown placeholders mapped to those components)
-- Hero + inline images downloaded via `npm run fetch:pexels` and saved under `content/trainingint/$ARGUMENTS/images/`. Use the queries from the skeleton.
-- Frontmatter at top of file matching the content collection schema in `src/content/config.ts` (title, description, primaryKeyword, keywordCluster, pillar, cluster, publishedAt, heroImage, heroAlt, readingTime, courseLinks, faqs)
+- CourseCTA + AuthorBio slots marked as inline HTML/markdown placeholders that `scripts/wp_publish.py` resolves at publish (no MDX — the WP target is plain HTML)
+- Hero + inline images downloaded via `python scripts/fetch_pexels_inline.py <slug>` (uses `PEXELS_API_KEY` from `.env`) and saved under `content/trainingint/$ARGUMENTS/images/`. Use the queries from the skeleton.
+- Frontmatter at top of file (YAML): title, description, primaryKeyword, keywordCluster, pillar, cluster, publishedAt, heroImage, heroAlt, readingTime, courseLinks, faqs
 - **Voice is NOT yet applied** — write clean, competent, generic prose. Stage 4 (`/ae-4-voice-pass`) injects Vinai's voice. If you write voice now, you'll fight Stage 4.
 
 ## Process
 1. Read `cluster.md` and `serp.md`; read `courses/trainingint.yaml` for the course-link assignment; read `voice/voice.md` and `voice/do-not-write.md` for **what to avoid** (no AI tells, no banned phrases — but no positive voice injection)
 2. Write `01-skeleton.md`; show to user; wait for sign-off
-3. Once approved, fetch Pexels images using `node scripts/fetch-pexels.mjs` (or invoke the equivalent). Save to `images/`.
-4. Write `02-draft.md` with frontmatter, prose, components, image references
+3. Once approved, fetch Pexels images: `python scripts/fetch_pexels_inline.py $ARGUMENTS`. Save to `images/`.
+4. Write `02-draft.md` with frontmatter, prose, placeholder slots, image references
 6. Confirm reading time roughly matches target word count
 
 ## Refuse to proceed if

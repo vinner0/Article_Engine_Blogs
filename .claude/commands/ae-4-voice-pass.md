@@ -57,7 +57,7 @@ Scrub all of these from the draft:
 ## Preserve from the draft
 - All H1 / H2 / H3 structure exactly
 - All cluster keywords (don't drop them while rewriting)
-- All MDX component imports (`<AuthorBio />`, `<CourseCTA />`, `<TableOfContents />`, `<RelatedPosts />`)
+- All placeholder slots (AuthorBio, CourseCTA, TableOfContents, RelatedPosts) — these are inline markers, not MDX components; `scripts/wp_publish.py` resolves them at publish
 - Frontmatter at top — copy verbatim
 - Image references (`heroImage`, inline `![](...)`)
 - Course links + internal links (Stage 6 will rebalance, but don't drop them)

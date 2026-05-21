@@ -16,8 +16,8 @@ You are running **Stage 6** of the Article Engine pipeline (trainingint.com) for
 - `seo/checklist.md` — the 80+ item canonical checklist
 - `seo/link-budget.md` — link rules
 - `seo/pillar-map.yaml` — for related blog posts in same/adjacent pillar + course-link assignments
-- `src/lib/link-budget.ts` — programmatic validator
-- `src/data/courses.json` and the published-log to find existing trainingint.com blog posts for internal linking
+- `scripts/lib/link_budget.py` — programmatic validator
+- `courses/trainingint.yaml` + `status/trainingint.yaml` to find existing trainingint.com blog posts (status: scheduled/published) for internal linking
 
 ## Outputs (write both before declaring success)
 1. `content/trainingint/$ARGUMENTS/_draft/04-seo.html`
