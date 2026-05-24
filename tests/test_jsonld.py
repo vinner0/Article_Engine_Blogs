@@ -1,5 +1,5 @@
 import json
-from scripts.lib.jsonld import build_jsonld
+from scripts.lib.jsonld import build_jsonld, repair_jsonld_script_close
 def _b(**kw):
     base=dict(url="https://t/x/", title="How to X", description="d",
               author="Vinai Prakash", publisher="Intellisoft Training Pte Ltd",
@@ -60,3 +60,32 @@ def test_article_optional_fields():   # I1: image/dates emitted only when provid
        and art["dateModified"]=="2026-06-02"
     art2=[n for n in _b()["@graph"] if n["@type"]=="Article"][0]
     assert "image" not in art2 and "datePublished" not in art2  # absent by default
+
+def test_repair_fixes_escaped_close():
+    bad = ('<script type="application/ld+json">'
+           '{"@context":"https://schema.org","@graph":[{"@type":"FAQPage"}]}<\\/script>\n')
+    out, n = repair_jsonld_script_close(bad)
+    assert n == 1
+    assert "<\\/script>" not in out and "</script>" in out   # close is now literal
+    # the repaired block must now be extractable + valid
+    import re, json
+    blocks = re.findall(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', out, re.I|re.S)
+    assert len(blocks) == 1 and json.loads(blocks[0])["@graph"][0]["@type"] == "FAQPage"
+
+def test_repair_idempotent_on_good_block():
+    good = ('<script type="application/ld+json">'
+            '{"@graph":[{"@type":"FAQPage"}]}</script>\n')
+    out, n = repair_jsonld_script_close(good)
+    assert n == 0 and out == good                            # already literal -> untouched
+
+def test_repair_preserves_escaped_close_INSIDE_a_string_value():   # SAFETY
+    # an answer text legitimately containing </script> -> build_jsonld escapes it to <\/script>
+    # INSIDE the JSON string. raw_decode must treat that as data, NOT as the block close.
+    block = ('<script type="application/ld+json">'
+             '{"@graph":[{"@type":"FAQPage","x":"see <\\/script> tag"}]}<\\/script>')
+    out, n = repair_jsonld_script_close(block)
+    assert n == 1
+    import re, json
+    inner = re.findall(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', out, re.I|re.S)[0]
+    data = json.loads(inner)
+    assert data["@graph"][0]["x"] == "see </script> tag"     # internal escape preserved as data

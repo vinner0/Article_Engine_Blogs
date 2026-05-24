@@ -1,4 +1,4 @@
-import json
+import json, re
 def build_jsonld(url,title,description,author,publisher,faqs,breadcrumb,
                  suppress=None,image_url=None,date_published=None,date_modified=None,
                  author_same_as=None):
@@ -27,3 +27,31 @@ def build_jsonld(url,title,description,author,publisher,faqs,breadcrumb,
     # in-HTML <script type="application/ld+json"> block ae-6 embeds this in.
     # `\/` is a valid JSON escape for `/`, so json.loads() is unaffected.
     return json.dumps({"@context":"https://schema.org","@graph":g}).replace("</","<\\/")
+
+def repair_jsonld_script_close(html):
+    """Repair ld+json <script> blocks whose CLOSING tag was escaped to <\\/script>
+    instead of a literal </script> (a generation bug that leaves the block unclosed
+    in the browser). For each application/ld+json opening, find where its JSON value
+    ends via json.raw_decode — which safely treats any <\\/script> INSIDE a string
+    value as data, not the close — then, if the next non-space token is an escaped
+    close, rewrite it to a literal </script>. Returns (repaired_html, n_fixed).
+    Idempotent: a block already closed by a literal </script> is left untouched.
+    Processes right-to-left so earlier spans' indices stay valid after splicing."""
+    dec = json.JSONDecoder()
+    n = 0
+    spans = list(re.finditer(r'<script[^>]*application/ld\+json[^>]*>', html, re.I))
+    for m in reversed(spans):
+        k = m.end()
+        while k < len(html) and html[k] in ' \t\r\n':
+            k += 1
+        try:
+            _, end = dec.raw_decode(html, k)
+        except ValueError:
+            continue                      # not clean JSON at the opening; leave for the gate
+        j = end
+        while j < len(html) and html[j] in ' \t\r\n':
+            j += 1
+        if html.startswith('<\\/script>', j):
+            html = html[:j] + '</script>' + html[j + len('<\\/script>'):]
+            n += 1
+    return html, n

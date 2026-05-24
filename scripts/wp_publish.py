@@ -18,14 +18,18 @@ _AE_TOKEN = re.compile(r'ae:(?:sibling|img):[^\s"\'<>]+')
 _LDJSON = re.compile(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', re.I | re.S)
 
 def assert_jsonld_valid(html, slug):
-    """Fail-closed: every embedded application/ld+json block in the OUTGOING html
-    must parse. Mirrors the _AE_TOKEN gate — runs before the WP POST write so a
-    refusal does not create/update the post. (Inline media is uploaded earlier in
-    publish_article, so a refusal here can still leave orphaned media — same as the
-    existing _AE_TOKEN gate; acceptable for this backfill.) Catches the publish/
-    render-layer corruption the pre-publish checklist (which trusts build_jsonld)
-    cannot see."""
-    for i, block in enumerate(_LDJSON.findall(html)):
+    """Fail-closed: every embedded application/ld+json block must be (a) literally
+    closed by </script> and (b) valid JSON. (a) catches the escaped/absent-close
+    malformation (closing tag written as <\\/script>) that the parse-only check is
+    blind to — _LDJSON needs a literal </script>, so an unclosed opening yields 0
+    matched blocks while an opening still exists. Runs before the WP POST write."""
+    opens = len(re.findall(r'<script[^>]+application/ld\+json', html, re.I))
+    blocks = _LDJSON.findall(html)
+    if len(blocks) < opens:
+        raise ValueError(
+            f"{opens} JSON-LD opening(s) but {len(blocks)} literally closed by </script> "
+            f"in {slug!r}, refusing to publish (escaped or missing </script> close)")
+    for i, block in enumerate(blocks):
         try:
             json.loads(block)
         except ValueError as e:
