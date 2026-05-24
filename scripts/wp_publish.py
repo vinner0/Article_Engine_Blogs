@@ -98,6 +98,24 @@ def strip_body_h1(html):
     last pre-write content normalization."""
     return re.sub(r'<(/?)h1(\b[^>]*)>', r'<\1h2\2>', html, flags=re.I)
 
+def strip_body_hero_img(html, hero_filename):
+    """When the hero is set as the WP featured image (the theme renders it at top),
+    remove the duplicate hero <img> from the body so the page doesn't show two heroes.
+    Matches the body <img> whose src is the hero's ae:img: token — so this MUST run
+    BEFORE resolve_inline_media (while the token is still present). Removes an enclosing
+    <figure>...</figure> if present (no empty shell left), else the bare <img>. Only the
+    FIRST occurrence (the hero) is removed; any later legitimate reuse is kept."""
+    if not hero_filename:
+        return html
+    token = re.escape(f"ae:img:{hero_filename}")
+    fig = re.compile(r'<figure\b[^>]*>\s*<img\b[^>]*src=["\']' + token
+                     + r'["\'][^>]*>.*?</figure>', re.I | re.S)
+    new, n = fig.subn('', html, count=1)
+    if n:
+        return new
+    img = re.compile(r'<img\b[^>]*src=["\']' + token + r'["\'][^>]*>', re.I)
+    return img.sub('', html, count=1)
+
 def upload_featured(wp, image_path):
     p=pathlib.Path(image_path)
     mime=mimetypes.guess_type(p.name)[0] or "image/jpeg"
@@ -133,6 +151,8 @@ def publish_article(wp, uid, slug, title, html, meta, scheduled_iso,
                     tags=None, images_dir=None, wp_status="future", add_toc=True):
     if status_map is not None:
         html, _ = resolve_internal_links(html, status_map)
+    if featured_path:                 # theme renders the featured hero; drop the body duplicate
+        html = strip_body_hero_img(html, pathlib.Path(featured_path).name)
     if images_dir is not None:
         html = resolve_inline_media(wp, html, images_dir)
     if add_toc:

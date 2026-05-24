@@ -1,6 +1,6 @@
 import responses, pytest
 from scripts.lib.wp_client import WPClient
-from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc, strip_body_h1, assert_jsonld_valid
+from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc, strip_body_h1, assert_jsonld_valid, strip_body_hero_img
 WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
 def wp(): return WPClient(WP,"u","p")
 
@@ -261,3 +261,48 @@ def test_publish_aborts_on_malformed_jsonld():   # C: gate wired into publish, b
     # ADVERSARIAL: remove the assert_jsonld_valid wiring line and publish_article reaches
     # find_post_by_uid -> an unmocked HTTP call (ConnectionError, not our ValueError) -> fails.
     assert len(responses.calls) == 0   # gate fires BEFORE any WP read/write
+
+def test_strip_body_hero_img_removes_figure_wrapped():   # production-shaped: hero in a <figure>
+    html = ('<figure class="hero"><img src="ae:img:hero.jpg" alt="Office worker using Excel">'
+            '<figcaption>cap</figcaption></figure><h2>Intro</h2><p>x</p>')
+    out = strip_body_hero_img(html, "hero.jpg")
+    assert "ae:img:hero.jpg" not in out          # ADVERSARIAL: no-op leaves the token -> fails
+    assert "<figure" not in out and "figcaption" not in out   # whole figure removed, no empty shell
+    assert "<h2>Intro</h2>" in out               # rest of the body untouched
+
+def test_strip_body_hero_img_removes_bare_img():
+    html = '<img src="ae:img:hero.jpg" alt="hero"><h2>Intro</h2>'
+    out = strip_body_hero_img(html, "hero.jpg")
+    assert "ae:img:hero.jpg" not in out and "<h2>Intro</h2>" in out
+
+def test_strip_body_hero_img_keeps_other_images():
+    html = ('<img src="ae:img:hero.jpg" alt="hero">'
+            '<img src="ae:img:inline-01.jpg" alt="step one">')
+    out = strip_body_hero_img(html, "hero.jpg")
+    assert "ae:img:hero.jpg" not in out          # hero removed
+    assert "ae:img:inline-01.jpg" in out          # non-hero inline image kept
+
+def test_strip_body_hero_img_only_first_occurrence():
+    html = ('<img src="ae:img:hero.jpg" alt="hero">mid'
+            '<img src="ae:img:hero.jpg" alt="again">')
+    out = strip_body_hero_img(html, "hero.jpg")
+    assert out.count("ae:img:hero.jpg") == 1      # only the first (the hero) removed
+
+def test_strip_body_hero_img_noop_when_no_hero_filename():
+    html = '<img src="ae:img:hero.jpg">'
+    assert strip_body_hero_img(html, None) == html
+    assert strip_body_hero_img(html, "") == html
+
+@responses.activate
+def test_publish_strips_body_hero_when_featured_set(tmp_path):   # B: no duplicate hero ships
+    hero = tmp_path / "hero.jpg"; hero.write_bytes(b"\xff\xd8\xff\xe0jpeg")
+    responses.get(f"{AE}/find", status=404)
+    responses.get(f"{WP}/posts", json=[], status=200)
+    responses.post(f"{WP}/media", json={"id": 9}, status=201)
+    responses.post(f"{WP}/posts", json={"id": 100}, status=201)
+    body = '<figure><img src="ae:img:hero.jpg" alt="hero"></figure><h2>A</h2><p>x</p>'
+    publish_article(wp(), "uid1", "how-to-x", "T", body, {}, "2026-06-01T09:00:00", 5, 1,
+                    featured_path=str(hero))
+    sent = responses.calls[-1].request.body
+    assert b"ae:img:hero.jpg" not in sent      # ADVERSARIAL: unwire -> token survives -> fails
+    assert b"<h2>A</h2>" in sent
