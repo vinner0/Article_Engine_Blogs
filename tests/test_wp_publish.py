@@ -293,6 +293,15 @@ def test_strip_body_hero_img_noop_when_no_hero_filename():
     assert strip_body_hero_img(html, None) == html
     assert strip_body_hero_img(html, "") == html
 
+def test_assert_jsonld_valid_rejects_escaped_close():   # the Outlook artifact shape
+    # opening present, but the CLOSING tag is escaped <\/script> -> no literal </script>.
+    # _LDJSON finds 0 blocks; the OLD gate passed blind. The hardened gate must FAIL.
+    bad = ('<p>x</p><script type="application/ld+json">'
+           '{"@context":"https://schema.org","@graph":[{"@type":"FAQPage"}]}<\\/script>')
+    with pytest.raises(ValueError, match="JSON-LD"):
+        assert_jsonld_valid(bad, "how-to-use-copilot-in-outlook")
+    # ADVERSARIAL: the OLD gate (parse-only, no opening-count) does NOT raise here -> fails.
+
 @responses.activate
 def test_publish_strips_body_hero_when_featured_set(tmp_path):   # B: no duplicate hero ships
     hero = tmp_path / "hero.jpg"; hero.write_bytes(b"\xff\xd8\xff\xe0jpeg")
