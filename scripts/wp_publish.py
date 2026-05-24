@@ -67,6 +67,15 @@ def inject_toc(html, min_h2=3):
     idx = new_html.find('<h2')
     return new_html[:idx] + nav + new_html[idx:]
 
+def strip_body_h1(html):
+    """WordPress renders the post title as the page <h1>; any <h1> in the body is
+    therefore a duplicate (checklist #9). Demote every body <h1> to <h2> — non-
+    destructive (no content lost), deterministic, idempotent. Preserves the tag's
+    attributes (class/id) by rewriting only the tag name. Order-independent vs
+    inject_toc (which only scans <h2>); placed after the content transforms as the
+    last pre-write content normalization."""
+    return re.sub(r'<(/?)h1(\b[^>]*)>', r'<\1h2\2>', html, flags=re.I)
+
 def upload_featured(wp, image_path):
     p=pathlib.Path(image_path)
     mime=mimetypes.guess_type(p.name)[0] or "image/jpeg"
@@ -106,6 +115,7 @@ def publish_article(wp, uid, slug, title, html, meta, scheduled_iso,
         html = resolve_inline_media(wp, html, images_dir)
     if add_toc:
         html = inject_toc(html)
+    html = strip_body_h1(html)   # WP supplies the page <h1> (title); demote any body <h1> (order vs inject_toc is irrelevant — it only scans <h2>)
     # Fail-closed: never push a post that still carries an unresolved ae: placeholder.
     # This is the guard that makes the vlookup raw-token leak impossible — it fires whether
     # resolution was skipped (status_map/images_dir omitted) or a token was malformed, and

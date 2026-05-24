@@ -1,6 +1,6 @@
 import responses, pytest
 from scripts.lib.wp_client import WPClient
-from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc
+from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc, strip_body_h1
 WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
 def wp(): return WPClient(WP,"u","p")
 
@@ -190,3 +190,39 @@ def test_update_live_post_publishes_not_futures():     # A2: status/date-aware b
                     status_map={}, wp_status="publish")
     body=responses.calls[-1].request.body
     assert b'"publish"' in body and b'"future"' not in body and up.call_count==1
+
+def test_strip_body_h1_demotes_to_h2():          # core contract
+    # production-shaped: real Outlook artifact body H1 (04-seo.html:54)
+    html = ('<p>intro</p>'
+            '<h1>How to Use Copilot in Outlook in 2026: A Practical Walkthrough</h1>'
+            '<h2>Setup</h2><p>body</p>')
+    out = strip_body_h1(html)
+    assert '<h1' not in out and '</h1>' not in out          # ADVERSARIAL: no-op stub fails here
+    assert ('<h2>How to Use Copilot in Outlook in 2026: A Practical Walkthrough</h2>'
+            in out)
+    assert '<h2>Setup</h2>' in out                          # untouched real h2 survives
+
+def test_strip_body_h1_idempotent():
+    html = '<h1>Title</h1><h2>x</h2>'
+    once = strip_body_h1(html)
+    assert strip_body_h1(once) == once                      # ADVERSARIAL: a global re-run must not corrupt
+
+def test_strip_body_h1_preserves_h1_attributes():
+    html = '<h1 class="lead" id="top">Title</h1>'
+    out = strip_body_h1(html)
+    assert out == '<h2 class="lead" id="top">Title</h2>'
+
+def test_strip_body_h1_noop_when_no_body_h1():
+    html = '<h2>only h2 here</h2><p>x</p>'                   # the 3 clean published pages
+    assert strip_body_h1(html) == html
+
+@responses.activate
+def test_publish_demotes_body_h1():   # B: wired through publish, no double-H1 ships
+    responses.get(f"{AE}/find", status=404)             # uid not found
+    responses.get(f"{WP}/posts", json=[], status=200)   # slug not found
+    responses.post(f"{WP}/posts", json={"id": 100}, status=201)
+    publish_article(wp(), "uid1", "how-to-x", "Real Title",
+                    "<h1>Real Title</h1><h2>A</h2><p>x</p>", {}, "2026-06-01T09:00:00", 5, 1)
+    body = responses.calls[-1].request.body             # bytes of the create POST
+    assert b"<h1" not in body          # ADVERSARIAL: drop the strip_body_h1 wiring line -> fails
+    assert b"<h2>Real Title</h2>" in body
