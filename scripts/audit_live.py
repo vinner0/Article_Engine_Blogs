@@ -9,7 +9,7 @@ Usage:
   python -m scripts.audit_live trainingint --scheduled     # scheduled queue, via artifacts
   python -m scripts.audit_live trainingint <slug> [slug..] # specific slugs (live)
 """
-import os, re, sys, json, pathlib, requests, yaml
+import re, sys, json, pathlib, requests, yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 _LDJSON = re.compile(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', re.I | re.S)
