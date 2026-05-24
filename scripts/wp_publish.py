@@ -1,7 +1,7 @@
 """Idempotent scheduled-post publisher. find_post_by_uid hits the always-installed
 helper route (Task 9), so a rerun never duplicates a post — verified live by
 probe_uid_roundtrip (Task 10) before this is used."""
-import re, hashlib, mimetypes, pathlib, requests
+import re, hashlib, json, mimetypes, pathlib, requests
 
 def content_uid(site, slug):
     return hashlib.sha1(f"{site}:{slug}".encode()).hexdigest()[:16]
@@ -9,6 +9,28 @@ def content_uid(site, slug):
 # Any ae:sibling:/ae:img: token that survives resolution. Matches the token whether
 # it sits in href="..."/src="..." or leaked as bare text; stops at quote/bracket/space.
 _AE_TOKEN = re.compile(r'ae:(?:sibling|img):[^\s"\'<>]+')
+
+# Match each in-HTML JSON-LD block exactly as a browser/Google parser would: the
+# non-greedy (.*?) stops at the first REAL </script>; an escaped <\/script> inside
+# the JSON (ae-6's breakout guard) is correctly skipped. json.loads handles the
+# valid \/ escape, so a clean block parses; a block with markup appended before the
+# real </script> raises "Extra data" — which is the Outlook live failure we must catch.
+_LDJSON = re.compile(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', re.I | re.S)
+
+def assert_jsonld_valid(html, slug):
+    """Fail-closed: every embedded application/ld+json block in the OUTGOING html
+    must parse. Mirrors the _AE_TOKEN gate — runs before the WP POST write so a
+    refusal does not create/update the post. (Inline media is uploaded earlier in
+    publish_article, so a refusal here can still leave orphaned media — same as the
+    existing _AE_TOKEN gate; acceptable for this backfill.) Catches the publish/
+    render-layer corruption the pre-publish checklist (which trusts build_jsonld)
+    cannot see."""
+    for i, block in enumerate(_LDJSON.findall(html)):
+        try:
+            json.loads(block)
+        except ValueError as e:
+            raise ValueError(
+                f"invalid JSON-LD block #{i} in {slug!r}, refusing to publish: {e}")
 
 def resolve_internal_links(html, status_map):
     """Replace ae:sibling:<slug> hrefs with live URLs for siblings present in
@@ -116,6 +138,7 @@ def publish_article(wp, uid, slug, title, html, meta, scheduled_iso,
     if add_toc:
         html = inject_toc(html)
     html = strip_body_h1(html)   # WP supplies the page <h1> (title); demote any body <h1> (order vs inject_toc is irrelevant — it only scans <h2>)
+    assert_jsonld_valid(html, slug)   # fail-closed: no malformed FAQ/Article schema ships
     # Fail-closed: never push a post that still carries an unresolved ae: placeholder.
     # This is the guard that makes the vlookup raw-token leak impossible — it fires whether
     # resolution was skipped (status_map/images_dir omitted) or a token was malformed, and

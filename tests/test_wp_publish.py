@@ -1,6 +1,6 @@
 import responses, pytest
 from scripts.lib.wp_client import WPClient
-from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc, strip_body_h1
+from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc, strip_body_h1, assert_jsonld_valid
 WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
 def wp(): return WPClient(WP,"u","p")
 
@@ -226,3 +226,27 @@ def test_publish_demotes_body_h1():   # B: wired through publish, no double-H1 s
     body = responses.calls[-1].request.body             # bytes of the create POST
     assert b"<h1" not in body          # ADVERSARIAL: drop the strip_body_h1 wiring line -> fails
     assert b"<h2>Real Title</h2>" in body
+
+def test_assert_jsonld_valid_passes_clean_block():
+    from scripts.lib.jsonld import build_jsonld
+    j = build_jsonld("https://x.test/p", "T", "d", "Vinai", "Org",
+                     faqs=[{"q": "Q1?", "a": "use </script> safely"}],
+                     breadcrumb=[("Home", "https://x.test/")])
+    html = f'<p>body</p><script type="application/ld+json">{j}</script>'
+    assert_jsonld_valid(html, "slug")          # must NOT raise (the </ -> <\/ guard is json.loads-safe)
+
+def test_assert_jsonld_valid_rejects_extra_data():   # production-shaped: the real Outlook live failure
+    # one <script> tag holding a complete JSON object THEN trailing markup before </script>
+    broken = ('<script type="application/ld+json">'
+              '{"@context":"https://schema.org","@graph":[{"@type":"FAQPage",'
+              '"mainEntity":[{"@type":"Question","name":"Q?","acceptedAnswer":'
+              '{"@type":"Answer","text":"a"}}]}]}<\\/script></p><div>elementor junk'
+              '</script>')
+    with pytest.raises(ValueError, match="JSON-LD"):
+        assert_jsonld_valid(broken, "how-to-use-copilot-in-outlook")
+    # ADVERSARIAL: a no-op stub that never calls json.loads will NOT raise here, so
+    # pytest.raises(ValueError) reports "DID NOT RAISE" -> the test fails unless the parse logic is real.
+
+def test_assert_jsonld_valid_ignores_non_ldjson_scripts():
+    html = '<script>var x=1;</script><p>no ld+json here</p>'
+    assert_jsonld_valid(html, "slug")          # must NOT raise (no ld+json blocks)
