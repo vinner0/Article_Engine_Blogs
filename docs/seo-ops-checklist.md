@@ -11,6 +11,10 @@ related block, course card, title template, status sync) are already done in cod
       Set Vinai's: `https://www.vinaiprakash.com`, `https://www.youtube.com/@excelchamp`, and your
       **exact LinkedIn URL** (then also drop that LinkedIn URL into `config/sites.yaml`
       sites.trainingint.author.same_as for portability).
+- [ ] **hreflang `en-SG`.** Absent on all live pages (checklist #51 reclassified — the engine cannot
+      emit `<head>` link tags and Yoast-free has no hreflang). If you want it, add via a hreflang
+      plugin or Yoast Premium; for a single-locale SG site it is low-value. `scripts/audit_live.py`
+      reports presence as INFO only.
 - [ ] **Cross-domain consolidation.** Nav "Course List" points to intellisoft.com.sg from
       trainingint.com — link equity is split across two domains targeting the same SG audience.
       Pick one primary domain and 301 the other (or stop cross-linking the nav).

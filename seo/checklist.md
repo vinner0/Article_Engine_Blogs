@@ -64,7 +64,7 @@ Run by `/blog-seo-pass`. Output: `_audit/seo-checklist.md` per post with PASS/FA
 ## Technical / snippet bait (5)
 49. Clean kebab-case URL slug, ≤60 chars, no stop words
 50. Canonical tag present and matches the URL
-51. `hreflang="en-SG"` present
+51. `hreflang="en-SG"` present — **MANUAL/WP (not engine-checkable).** Yoast-free does not emit hreflang and the engine never injects `<head>` link tags; verified absent on all live pages 2026-05-24. Tracked in `docs/seo-ops-checklist.md`. `scripts/audit_live.py` reports its presence as INFO, never FAIL.
 52. JSON-LD validates via Google Rich Results Test
 53. Table-of-contents block for posts ≥3 H2s — **auto-injected at publish** (scripts/wp_publish.py inject_toc); do not hand-author
 

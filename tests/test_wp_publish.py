@@ -1,6 +1,6 @@
 import responses, pytest
 from scripts.lib.wp_client import WPClient
-from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc
+from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc, strip_body_h1, assert_jsonld_valid, strip_body_hero_img
 WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
 def wp(): return WPClient(WP,"u","p")
 
@@ -190,3 +190,119 @@ def test_update_live_post_publishes_not_futures():     # A2: status/date-aware b
                     status_map={}, wp_status="publish")
     body=responses.calls[-1].request.body
     assert b'"publish"' in body and b'"future"' not in body and up.call_count==1
+
+def test_strip_body_h1_demotes_to_h2():          # core contract
+    # production-shaped: real Outlook artifact body H1 (04-seo.html:54)
+    html = ('<p>intro</p>'
+            '<h1>How to Use Copilot in Outlook in 2026: A Practical Walkthrough</h1>'
+            '<h2>Setup</h2><p>body</p>')
+    out = strip_body_h1(html)
+    assert '<h1' not in out and '</h1>' not in out          # ADVERSARIAL: no-op stub fails here
+    assert ('<h2>How to Use Copilot in Outlook in 2026: A Practical Walkthrough</h2>'
+            in out)
+    assert '<h2>Setup</h2>' in out                          # untouched real h2 survives
+
+def test_strip_body_h1_idempotent():
+    html = '<h1>Title</h1><h2>x</h2>'
+    once = strip_body_h1(html)
+    assert strip_body_h1(once) == once                      # ADVERSARIAL: a global re-run must not corrupt
+
+def test_strip_body_h1_preserves_h1_attributes():
+    html = '<h1 class="lead" id="top">Title</h1>'
+    out = strip_body_h1(html)
+    assert out == '<h2 class="lead" id="top">Title</h2>'
+
+def test_strip_body_h1_noop_when_no_body_h1():
+    html = '<h2>only h2 here</h2><p>x</p>'                   # the 3 clean published pages
+    assert strip_body_h1(html) == html
+
+@responses.activate
+def test_publish_demotes_body_h1():   # B: wired through publish, no double-H1 ships
+    responses.get(f"{AE}/find", status=404)             # uid not found
+    responses.get(f"{WP}/posts", json=[], status=200)   # slug not found
+    responses.post(f"{WP}/posts", json={"id": 100}, status=201)
+    publish_article(wp(), "uid1", "how-to-x", "Real Title",
+                    "<h1>Real Title</h1><h2>A</h2><p>x</p>", {}, "2026-06-01T09:00:00", 5, 1)
+    body = responses.calls[-1].request.body             # bytes of the create POST
+    assert b"<h1" not in body          # ADVERSARIAL: drop the strip_body_h1 wiring line -> fails
+    assert b"<h2>Real Title</h2>" in body
+
+def test_assert_jsonld_valid_passes_clean_block():
+    from scripts.lib.jsonld import build_jsonld
+    j = build_jsonld("https://x.test/p", "T", "d", "Vinai", "Org",
+                     faqs=[{"q": "Q1?", "a": "use </script> safely"}],
+                     breadcrumb=[("Home", "https://x.test/")])
+    html = f'<p>body</p><script type="application/ld+json">{j}</script>'
+    assert_jsonld_valid(html, "slug")          # must NOT raise (the </ -> <\/ guard is json.loads-safe)
+
+def test_assert_jsonld_valid_rejects_extra_data():   # production-shaped: the real Outlook live failure
+    # one <script> tag holding a complete JSON object THEN trailing markup before </script>
+    broken = ('<script type="application/ld+json">'
+              '{"@context":"https://schema.org","@graph":[{"@type":"FAQPage",'
+              '"mainEntity":[{"@type":"Question","name":"Q?","acceptedAnswer":'
+              '{"@type":"Answer","text":"a"}}]}]}<\\/script></p><div>elementor junk'
+              '</script>')
+    with pytest.raises(ValueError, match="JSON-LD"):
+        assert_jsonld_valid(broken, "how-to-use-copilot-in-outlook")
+    # ADVERSARIAL: a no-op stub that never calls json.loads will NOT raise here, so
+    # pytest.raises(ValueError) reports "DID NOT RAISE" -> the test fails unless the parse logic is real.
+
+def test_assert_jsonld_valid_ignores_non_ldjson_scripts():
+    html = '<script>var x=1;</script><p>no ld+json here</p>'
+    assert_jsonld_valid(html, "slug")          # must NOT raise (no ld+json blocks)
+
+@responses.activate
+def test_publish_aborts_on_malformed_jsonld():   # C: gate wired into publish, before any WP write
+    body = ('<p>x</p><script type="application/ld+json">'
+            '{"@type":"FAQPage"}<\\/script></p><div>junk</script>')   # JSON + trailing markup
+    with pytest.raises(ValueError, match="JSON-LD"):
+        publish_article(wp(), "uid1", "how-to-x", "T", body, {},
+                        "2026-06-01T09:00:00", 5, 1)
+    # ADVERSARIAL: remove the assert_jsonld_valid wiring line and publish_article reaches
+    # find_post_by_uid -> an unmocked HTTP call (ConnectionError, not our ValueError) -> fails.
+    assert len(responses.calls) == 0   # gate fires BEFORE any WP read/write
+
+def test_strip_body_hero_img_removes_figure_wrapped():   # production-shaped: hero in a <figure>
+    html = ('<figure class="hero"><img src="ae:img:hero.jpg" alt="Office worker using Excel">'
+            '<figcaption>cap</figcaption></figure><h2>Intro</h2><p>x</p>')
+    out = strip_body_hero_img(html, "hero.jpg")
+    assert "ae:img:hero.jpg" not in out          # ADVERSARIAL: no-op leaves the token -> fails
+    assert "<figure" not in out and "figcaption" not in out   # whole figure removed, no empty shell
+    assert "<h2>Intro</h2>" in out               # rest of the body untouched
+
+def test_strip_body_hero_img_removes_bare_img():
+    html = '<img src="ae:img:hero.jpg" alt="hero"><h2>Intro</h2>'
+    out = strip_body_hero_img(html, "hero.jpg")
+    assert "ae:img:hero.jpg" not in out and "<h2>Intro</h2>" in out
+
+def test_strip_body_hero_img_keeps_other_images():
+    html = ('<img src="ae:img:hero.jpg" alt="hero">'
+            '<img src="ae:img:inline-01.jpg" alt="step one">')
+    out = strip_body_hero_img(html, "hero.jpg")
+    assert "ae:img:hero.jpg" not in out          # hero removed
+    assert "ae:img:inline-01.jpg" in out          # non-hero inline image kept
+
+def test_strip_body_hero_img_only_first_occurrence():
+    html = ('<img src="ae:img:hero.jpg" alt="hero">mid'
+            '<img src="ae:img:hero.jpg" alt="again">')
+    out = strip_body_hero_img(html, "hero.jpg")
+    assert out.count("ae:img:hero.jpg") == 1      # only the first (the hero) removed
+
+def test_strip_body_hero_img_noop_when_no_hero_filename():
+    html = '<img src="ae:img:hero.jpg">'
+    assert strip_body_hero_img(html, None) == html
+    assert strip_body_hero_img(html, "") == html
+
+@responses.activate
+def test_publish_strips_body_hero_when_featured_set(tmp_path):   # B: no duplicate hero ships
+    hero = tmp_path / "hero.jpg"; hero.write_bytes(b"\xff\xd8\xff\xe0jpeg")
+    responses.get(f"{AE}/find", status=404)
+    responses.get(f"{WP}/posts", json=[], status=200)
+    responses.post(f"{WP}/media", json={"id": 9}, status=201)
+    responses.post(f"{WP}/posts", json={"id": 100}, status=201)
+    body = '<figure><img src="ae:img:hero.jpg" alt="hero"></figure><h2>A</h2><p>x</p>'
+    publish_article(wp(), "uid1", "how-to-x", "T", body, {}, "2026-06-01T09:00:00", 5, 1,
+                    featured_path=str(hero))
+    sent = responses.calls[-1].request.body
+    assert b"ae:img:hero.jpg" not in sent      # ADVERSARIAL: unwire -> token survives -> fails
+    assert b"<h2>A</h2>" in sent

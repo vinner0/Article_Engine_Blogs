@@ -1,7 +1,7 @@
 """Idempotent scheduled-post publisher. find_post_by_uid hits the always-installed
 helper route (Task 9), so a rerun never duplicates a post — verified live by
 probe_uid_roundtrip (Task 10) before this is used."""
-import re, hashlib, mimetypes, pathlib, requests
+import re, hashlib, json, mimetypes, pathlib, requests
 
 def content_uid(site, slug):
     return hashlib.sha1(f"{site}:{slug}".encode()).hexdigest()[:16]
@@ -9,6 +9,28 @@ def content_uid(site, slug):
 # Any ae:sibling:/ae:img: token that survives resolution. Matches the token whether
 # it sits in href="..."/src="..." or leaked as bare text; stops at quote/bracket/space.
 _AE_TOKEN = re.compile(r'ae:(?:sibling|img):[^\s"\'<>]+')
+
+# Match each in-HTML JSON-LD block exactly as a browser/Google parser would: the
+# non-greedy (.*?) stops at the first REAL </script>; an escaped <\/script> inside
+# the JSON (ae-6's breakout guard) is correctly skipped. json.loads handles the
+# valid \/ escape, so a clean block parses; a block with markup appended before the
+# real </script> raises "Extra data" — which is the Outlook live failure we must catch.
+_LDJSON = re.compile(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', re.I | re.S)
+
+def assert_jsonld_valid(html, slug):
+    """Fail-closed: every embedded application/ld+json block in the OUTGOING html
+    must parse. Mirrors the _AE_TOKEN gate — runs before the WP POST write so a
+    refusal does not create/update the post. (Inline media is uploaded earlier in
+    publish_article, so a refusal here can still leave orphaned media — same as the
+    existing _AE_TOKEN gate; acceptable for this backfill.) Catches the publish/
+    render-layer corruption the pre-publish checklist (which trusts build_jsonld)
+    cannot see."""
+    for i, block in enumerate(_LDJSON.findall(html)):
+        try:
+            json.loads(block)
+        except ValueError as e:
+            raise ValueError(
+                f"invalid JSON-LD block #{i} in {slug!r}, refusing to publish: {e}")
 
 def resolve_internal_links(html, status_map):
     """Replace ae:sibling:<slug> hrefs with live URLs for siblings present in
@@ -67,6 +89,33 @@ def inject_toc(html, min_h2=3):
     idx = new_html.find('<h2')
     return new_html[:idx] + nav + new_html[idx:]
 
+def strip_body_h1(html):
+    """WordPress renders the post title as the page <h1>; any <h1> in the body is
+    therefore a duplicate (checklist #9). Demote every body <h1> to <h2> — non-
+    destructive (no content lost), deterministic, idempotent. Preserves the tag's
+    attributes (class/id) by rewriting only the tag name. Order-independent vs
+    inject_toc (which only scans <h2>); placed after the content transforms as the
+    last pre-write content normalization."""
+    return re.sub(r'<(/?)h1(\b[^>]*)>', r'<\1h2\2>', html, flags=re.I)
+
+def strip_body_hero_img(html, hero_filename):
+    """When the hero is set as the WP featured image (the theme renders it at top),
+    remove the duplicate hero <img> from the body so the page doesn't show two heroes.
+    Matches the body <img> whose src is the hero's ae:img: token — so this MUST run
+    BEFORE resolve_inline_media (while the token is still present). Removes an enclosing
+    <figure>...</figure> if present (no empty shell left), else the bare <img>. Only the
+    FIRST occurrence (the hero) is removed; any later legitimate reuse is kept."""
+    if not hero_filename:
+        return html
+    token = re.escape(f"ae:img:{hero_filename}")
+    fig = re.compile(r'<figure\b[^>]*>\s*<img\b[^>]*src=["\']' + token
+                     + r'["\'][^>]*>.*?</figure>', re.I | re.S)
+    new, n = fig.subn('', html, count=1)
+    if n:
+        return new
+    img = re.compile(r'<img\b[^>]*src=["\']' + token + r'["\'][^>]*>', re.I)
+    return img.sub('', html, count=1)
+
 def upload_featured(wp, image_path):
     p=pathlib.Path(image_path)
     mime=mimetypes.guess_type(p.name)[0] or "image/jpeg"
@@ -102,10 +151,14 @@ def publish_article(wp, uid, slug, title, html, meta, scheduled_iso,
                     tags=None, images_dir=None, wp_status="future", add_toc=True):
     if status_map is not None:
         html, _ = resolve_internal_links(html, status_map)
+    if featured_path:                 # theme renders the featured hero; drop the body duplicate
+        html = strip_body_hero_img(html, pathlib.Path(featured_path).name)
     if images_dir is not None:
         html = resolve_inline_media(wp, html, images_dir)
     if add_toc:
         html = inject_toc(html)
+    html = strip_body_h1(html)   # WP supplies the page <h1> (title); demote any body <h1> (order vs inject_toc is irrelevant — it only scans <h2>)
+    assert_jsonld_valid(html, slug)   # fail-closed: no malformed FAQ/Article schema ships
     # Fail-closed: never push a post that still carries an unresolved ae: placeholder.
     # This is the guard that makes the vlookup raw-token leak impossible — it fires whether
     # resolution was skipped (status_map/images_dir omitted) or a token was malformed, and
