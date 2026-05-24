@@ -26,22 +26,38 @@ def _tag_attr(html, tag_pattern, attr):
     a = re.search(attr + r'=["\'](.*?)["\']', m.group(0), re.I)
     return a.group(1) if a else None
 
-def audit_html(html, expected_url=None):
-    """Return a list of check dicts: {check, ok, detail, severity}. Pure — no IO."""
-    checks = []
-
-    h1s = re.findall(r'<h1\b', html, re.I)
-    checks.append(_check("single_h1", len(h1s) == 1, f"found {len(h1s)} <h1>"))
-
-    bad = []
-    blocks = _LDJSON.findall(html)
+def _jsonld_check(html):
+    """Validate all ld+json blocks in `html`. Shared by live and artifact audits."""
+    bad, blocks = [], _LDJSON.findall(html)
     for i, b in enumerate(blocks):
         try:
             json.loads(b)
         except ValueError as e:
             bad.append(f"#{i}: {e}")
-    checks.append(_check("jsonld_valid", not bad,
-                         f"{len(blocks)} block(s); bad: {bad}" if bad else f"{len(blocks)} ok"))
+    return _check("jsonld_valid", not bad,
+                  f"{len(blocks)} block(s); bad: {bad}" if bad else f"{len(blocks)} ok")
+
+def _img_alt_check(html):
+    """Content images missing alt. Excludes tracking pixels. Shared by live and artifact audits."""
+    missing = 0
+    for img in re.findall(r'<img[^>]*>', html, re.I):
+        if re.search(r'\balt=', img, re.I):
+            continue
+        if re.search(r'(width=["\']?1\b|height=["\']?1\b|display:\s*none|'
+                     r'visibility:\s*hidden|opacity:\s*0|facebook\.com/tr|/pixel|utm\.gif)',
+                     img, re.I):
+            continue            # tracking pixel — not a content image
+        missing += 1
+    return _check("content_img_alt", missing == 0, f"{missing} content img(s) w/o alt")
+
+def audit_html(html, expected_url=None):
+    """Checks for a LIVE rendered page (has the WP/Yoast <head>). Pure — no IO."""
+    checks = []
+
+    h1s = re.findall(r'<h1\b', html, re.I)
+    checks.append(_check("single_h1", len(h1s) == 1, f"found {len(h1s)} <h1>"))
+
+    checks.append(_jsonld_check(html))
 
     # Order-independent: find the whole tag first, then pull the attribute from it,
     # so `rel`-before-`href` (Yoast) and `href`-before-`rel` both work.
@@ -54,24 +70,27 @@ def audit_html(html, expected_url=None):
     desc = _tag_attr(html, r'<meta\b[^>]*\bname=["\']description["\'][^>]*>', 'content') or ""
     checks.append(_check("meta_desc_len", 140 <= len(desc) <= 160, f"{len(desc)} chars"))
 
-    # Content images missing alt — exclude tracking pixels by BOTH dimension/style
-    # (1x1 / display:none) AND known-pixel URL (e.g. facebook.com/tr).
-    missing = 0
-    for img in re.findall(r'<img[^>]*>', html, re.I):
-        if re.search(r'\balt=', img, re.I):
-            continue
-        if re.search(r'(width=["\']?1\b|height=["\']?1\b|display:\s*none|'
-                     r'visibility:\s*hidden|opacity:\s*0|facebook\.com/tr|/pixel|utm\.gif)',
-                     img, re.I):
-            continue            # tracking pixel — not a content image
-        missing += 1
-    checks.append(_check("content_img_alt", missing == 0, f"{missing} content img(s) w/o alt"))
+    checks.append(_img_alt_check(html))
 
     has_hl = bool(re.search(r'hreflang=["\']en-?SG["\']', html, re.I))
     checks.append(_check("hreflang_en_sg", has_hl,
                          "present" if has_hl else "absent (manual/WP item #51)",
                          severity="info"))
 
+    return checks
+
+def audit_artifact_html(html):
+    """Checks meaningful on a PRE-PUBLISH artifact body (no <head>, so canonical /
+    meta / hreflang are NOT checked — WP/Yoast add them at render). The H1 rule is
+    INVERTED vs live: the artifact body must contain ZERO <h1> — WP renders the post
+    title as the page H1, so any body <h1> becomes a duplicate once live."""
+    checks = []
+    h1s = re.findall(r'<h1\b', html, re.I)
+    checks.append(_check("body_h1_absent", len(h1s) == 0,
+                         f"found {len(h1s)} body <h1>"
+                         + (" (will duplicate the WP title H1)" if h1s else "")))
+    checks.append(_jsonld_check(html))
+    checks.append(_img_alt_check(html))
     return checks
 
 def fetch(url, timeout=30):
@@ -81,7 +100,7 @@ def fetch(url, timeout=30):
 
 def audit_artifact(path):
     """Audit a local _draft/04-seo.html body (for scheduled posts not yet live)."""
-    return audit_html(pathlib.Path(path).read_text(encoding="utf-8"))
+    return audit_artifact_html(pathlib.Path(path).read_text(encoding="utf-8"))
 
 def _print(label, checks):
     fails = [c for c in checks if not c["ok"] and c["severity"] == "error"]

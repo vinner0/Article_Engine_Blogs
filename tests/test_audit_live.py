@@ -1,4 +1,4 @@
-from scripts.audit_live import audit_html
+from scripts.audit_live import audit_html, audit_artifact_html
 
 # Production-shaped page fragment: a theme title <h1> + a leaked body <h1> (the live
 # Outlook shape), one valid ld+json, one broken ld+json, a canonical, a meta desc,
@@ -58,3 +58,20 @@ def test_tracking_pixel_not_counted_as_missing_alt():   # only the FB pixel lack
 def test_hreflang_reported_not_failed():   # #51 reclassified manual: report absence, do NOT fail
     r = _result(audit_html(_page()), "hreflang_en_sg")
     assert r["severity"] == "info"
+
+def test_artifact_body_h1_is_a_failure():   # ADVERSARIAL: artifact must have NO body h1
+    body = '<p>intro</p><h1>How to X</h1><h2>Step</h2><p>x</p>'
+    r = _result(audit_artifact_html(body), "body_h1_absent")
+    assert r["ok"] is False and "1" in r["detail"]
+
+def test_artifact_no_body_h1_passes():       # the clean artifacts (e.g. essential-excel-formulas)
+    body = '<p>intro</p><h2>Step</h2><p>x</p>'
+    assert _result(audit_artifact_html(body), "body_h1_absent")["ok"] is True
+
+def test_artifact_skips_head_only_checks():  # canonical/meta/hreflang are NOT in an artifact
+    names = {c["check"] for c in audit_artifact_html('<p>x</p>')}
+    assert names == {"body_h1_absent", "jsonld_valid", "content_img_alt"}
+
+def test_artifact_jsonld_still_validated():   # a malformed embedded block is still caught
+    body = '<script type="application/ld+json">{"a":1}<\\/script></p>junk</script>'
+    assert _result(audit_artifact_html(body), "jsonld_valid")["ok"] is False
