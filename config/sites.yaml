@@ -19,7 +19,17 @@ sites:
       primary_course_occurrences_max: 3
       secondary_course_max: 3
       authoritative_outbound_min: 1
-      authoritative_outbound_max: 2
+      authoritative_outbound_max: 3   # bumped 2->3 (SEO audit 2026-05-24): allow 2-3 authority outbounds
+    author:                            # E-E-A-T author identity (jsonld.py author_same_as).
+      name: Vinai Prakash              # NOTE: trainingint suppresses Article schema (Yoast emits
+      url: https://www.vinaiprakash.com  # the @graph), so these are latent here — the LIVE lever is
+      same_as:                         # Yoast > Person sameAs. Engine uses these for any site with
+        - https://www.vinaiprakash.com #   seo_plugin_emits_graph: false and for portability.
+        - https://www.youtube.com/@excelchamp
+        # - https://www.linkedin.com/in/<confirm-handle>   # TODO Vinai: add exact LinkedIn URL here + in Yoast Person
+    seo_title:
+      brand_suffix: Intellisoft Singapore   # appended to SEO <title> (audit: title was geo/brand-blind)
+      append_year: true                      # append the current year for freshness
     probe:
       rest_ok: true
       seo_plugin: yoast            # manual override 2026-05-20: detect_seo_plugin returned "none" because Yoast doesn't show_in_rest=true its meta keys; confirmed yoast via active_plugins debug + verify_yoast_helper.py probe. See observation log.

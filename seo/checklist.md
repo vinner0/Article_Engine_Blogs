@@ -4,8 +4,9 @@ Run by `/blog-seo-pass`. Output: `_audit/seo-checklist.md` per post with PASS/FA
 
 ## Title & meta (8)
 1. Primary keyword present in `<title>`
-2. Title ≤ 60 characters
+2. Title core ≤ 60 characters (the ` ({year}) | {brand_suffix}` from config may extend it — Google renders by pixel width)
 3. Primary keyword near front of title (first 30 chars)
+3b. Title carries year + geo/brand suffix per `config/sites.yaml` seo_title (not geo-blind)
 4. Meta description 140–160 characters
 5. Meta description includes a CTA verb (read, learn, get, discover, see)
 6. Primary keyword in meta description
@@ -65,7 +66,7 @@ Run by `/blog-seo-pass`. Output: `_audit/seo-checklist.md` per post with PASS/FA
 50. Canonical tag present and matches the URL
 51. `hreflang="en-SG"` present
 52. JSON-LD validates via Google Rich Results Test
-53. Table-of-contents block for posts >1500 words
+53. Table-of-contents block for posts ≥3 H2s — **auto-injected at publish** (scripts/wp_publish.py inject_toc); do not hand-author
 
 ## Schema (3)
 54. Article JSON-LD present and valid
@@ -109,3 +110,13 @@ Run by `/blog-seo-pass`. Output: `_audit/seo-checklist.md` per post with PASS/FA
 78. All links resolve (200)
 79. No broken images
 80. Frontmatter validates against Zod schema
+
+## SEO audit additions — 2026-05-24 (8)
+81. **No residual `ae:` placeholder** — no `ae:sibling:` / `ae:img:` token survives to the body (publish fail-closed gate enforces this; a survivor means status_map/images_dir wasn't passed)
+82. Author JSON-LD carries `sameAs` (LinkedIn/YouTube/site) — via `build_jsonld(author_same_as=...)`, OR set in the SEO plugin's Person settings when it emits the @graph (trainingint: Yoast Person)
+83. Jumplink TOC present + every `<h2>` has a slug `id` anchor (auto-injected at publish for ≥3 H2s)
+84. Related-Articles block present near the bottom (3–4 hand-picked siblings via `scripts.lib.blocks.render_related`)
+85. Styled course card at peak intent (`scripts.lib.blocks.render_course_card`) — funding badge + Register button; no hardcoded price/intake
+86. 8–12 total internal links (inline siblings + course links + related block)
+87. Image alt is specific (subject/action + keyword context), not generic stock; filenames are slug-style + keyword-bearing
+88. HowTo / Course schema NOT emitted on blog posts (deliberate — see ae-6 spec)

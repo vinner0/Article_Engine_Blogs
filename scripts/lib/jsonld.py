@@ -1,11 +1,15 @@
 import json
 def build_jsonld(url,title,description,author,publisher,faqs,breadcrumb,
-                 suppress=None,image_url=None,date_published=None,date_modified=None):
+                 suppress=None,image_url=None,date_published=None,date_modified=None,
+                 author_same_as=None):
     suppress=suppress or set(); g=[]
     if "Article" not in suppress:
+        person={"@type":"Person","name":author}
+        if author_same_as:                       # E-E-A-T: link the author identity to
+            person["sameAs"]=list(author_same_as)  # LinkedIn / YouTube / personal site
         art={"@type":"Article","headline":title,"description":description,
              "mainEntityOfPage":url,
-             "author":{"@type":"Person","name":author},
+             "author":person,
              "publisher":{"@type":"Organization","name":publisher}}
         if image_url: art["image"]=image_url
         if date_published: art["datePublished"]=date_published

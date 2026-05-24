@@ -29,6 +29,8 @@ class WPClient:
             headers={"Content-Disposition":f'attachment; filename="{filename}"',
                      "Content-Type":mime},auth=self.auth,timeout=self.timeout)
         r.raise_for_status(); return r.json()["id"]
+    def get_post(self, pid):
+        return self._get(f"/posts/{pid}")
     def read_post_meta(self, pid, key):
         return self._get(f"/posts/{pid}").get("meta",{}).get(key)
     def delete_post(self, pid):

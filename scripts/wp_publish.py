@@ -6,6 +6,10 @@ import re, hashlib, mimetypes, pathlib, requests
 def content_uid(site, slug):
     return hashlib.sha1(f"{site}:{slug}".encode()).hexdigest()[:16]
 
+# Any ae:sibling:/ae:img: token that survives resolution. Matches the token whether
+# it sits in href="..."/src="..." or leaked as bare text; stops at quote/bracket/space.
+_AE_TOKEN = re.compile(r'ae:(?:sibling|img):[^\s"\'<>]+')
+
 def resolve_internal_links(html, status_map):
     """Replace ae:sibling:<slug> hrefs with live URLs for siblings present in
     status_map; for siblings not yet live, strip the anchor to plain text and
@@ -25,6 +29,43 @@ def resolve_internal_links(html, status_map):
     html=re.sub(r'<a [^>]*data-ae-unresolved="1"[^>]*>(.*?)</a>', r'\1', html,
                 flags=re.DOTALL)
     return html, unresolved
+
+def _slugify(text):
+    s = re.sub(r'<[^>]+>', '', text)              # strip inner tags
+    s = re.sub(r'&[a-zA-Z]+;|&#\d+;', ' ', s)     # entities -> space
+    s = re.sub(r'[^a-z0-9]+', '-', s.lower()).strip('-')
+    return s
+
+def inject_toc(html, min_h2=3):
+    """Add slug `id` anchors to every <h2> and insert a jumplink TOC before the first
+    section, for posts with >= min_h2 headings. Deterministic and idempotent — re-running
+    on already-processed HTML is a no-op (so backfill re-publishes never stack TOCs).
+    Anchor collisions (duplicate heading text) are disambiguated with a numeric suffix."""
+    if 'class="ae-toc"' in html:
+        return html
+    if len(re.findall(r'<h2[^>]*>', html)) < min_h2:
+        return html
+    items, seen = [], {}
+    def add_id(m):
+        attrs, inner = m.group('attrs'), m.group('inner')
+        existing = re.search(r'id\s*=\s*"([^"]*)"', attrs)
+        if existing:
+            sid = existing.group(1)
+        else:
+            base = _slugify(inner) or 'section'
+            n = seen.get(base, 0); seen[base] = n + 1
+            sid = base if n == 0 else f'{base}-{n}'
+            attrs = f'{attrs} id="{sid}"'
+        label = re.sub(r'<[^>]+>', '', inner).strip()
+        items.append((sid, label))
+        return f'<h2{attrs}>{inner}</h2>'
+    new_html = re.sub(r'<h2(?P<attrs>[^>]*)>(?P<inner>.*?)</h2>', add_id, html, flags=re.DOTALL)
+    nav = ('<nav class="ae-toc" aria-label="Table of contents">'
+           '<p><strong>On this page</strong></p><ul>'
+           + ''.join(f'<li><a href="#{sid}">{label}</a></li>' for sid, label in items)
+           + '</ul></nav>')
+    idx = new_html.find('<h2')
+    return new_html[:idx] + nav + new_html[idx:]
 
 def upload_featured(wp, image_path):
     p=pathlib.Path(image_path)
@@ -58,12 +99,22 @@ def resolve_inline_media(wp, html, images_dir):
 def publish_article(wp, uid, slug, title, html, meta, scheduled_iso,
                     category_id, author_id, featured_path=None,
                     status_map=None, seo_meta_rest_writable=True,
-                    tags=None, images_dir=None):
+                    tags=None, images_dir=None, wp_status="future", add_toc=True):
     if status_map is not None:
         html, _ = resolve_internal_links(html, status_map)
     if images_dir is not None:
         html = resolve_inline_media(wp, html, images_dir)
-    payload={"title":title,"slug":slug,"content":html,"status":"future",
+    if add_toc:
+        html = inject_toc(html)
+    # Fail-closed: never push a post that still carries an unresolved ae: placeholder.
+    # This is the guard that makes the vlookup raw-token leak impossible — it fires whether
+    # resolution was skipped (status_map/images_dir omitted) or a token was malformed, and
+    # runs BEFORE any WP write so a refusal leaves no partial state.
+    residual = _AE_TOKEN.findall(html)
+    if residual:
+        raise ValueError(f"unresolved ae: placeholders, refusing to publish {slug!r}: "
+                         f"{sorted(set(residual))}")
+    payload={"title":title,"slug":slug,"content":html,"status":wp_status,
              "date":scheduled_iso,"categories":[category_id],"author":author_id,
              "meta":{**({} if not seo_meta_rest_writable else meta),
                      "ae_content_uid":uid}}

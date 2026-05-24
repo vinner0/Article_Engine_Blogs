@@ -41,6 +41,18 @@ def test_script_breakout_escaped():   # ADVERSARIAL C1: raw json.dumps fails thi
         breadcrumb=[("Home","https://t/")])
     assert "</script>" not in raw and "<\\/script>" in raw
     assert json.loads(raw)["@graph"]                 # still valid JSON
+def test_author_same_as_emitted_when_provided():   # B5: E-E-A-T author identity
+    art=[n for n in _b(author_same_as=[
+            "https://www.linkedin.com/in/vinaiprakash",
+            "https://www.youtube.com/@excelchamp",
+            "https://www.vinaiprakash.com"])["@graph"] if n["@type"]=="Article"][0]
+    assert art["author"]["sameAs"]==[
+        "https://www.linkedin.com/in/vinaiprakash",
+        "https://www.youtube.com/@excelchamp",
+        "https://www.vinaiprakash.com"]
+def test_author_no_same_as_by_default():           # ADVERSARIAL: stub that always adds fails
+    art=[n for n in _b()["@graph"] if n["@type"]=="Article"][0]
+    assert "sameAs" not in art["author"]
 def test_article_optional_fields():   # I1: image/dates emitted only when provided
     art=[n for n in _b(image_url="https://t/i.jpg",date_published="2026-06-01",
             date_modified="2026-06-02")["@graph"] if n["@type"]=="Article"][0]

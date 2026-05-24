@@ -1,6 +1,6 @@
 import responses, pytest
 from scripts.lib.wp_client import WPClient
-from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media
+from scripts.wp_publish import publish_article, content_uid, resolve_internal_links, push_meta_via_helper, resolve_inline_media, inject_toc
 WP="https://www.trainingint.com/wp-json/wp/v2"; AE="https://www.trainingint.com/wp-json/ae/v1"
 def wp(): return WPClient(WP,"u","p")
 
@@ -127,3 +127,66 @@ def test_missing_inline_image_aborts_before_any_wp_write(tmp_path):  # B6: fail-
         publish_article(wp(),"u","s","T",'<img src="ae:img:missing.jpg">',{},
             "2026-06-01T09:00:00",5,1, images_dir=str(tmp_path))
     assert cr.call_count==0     # no post created — no partial state
+
+@responses.activate
+def test_publish_aborts_on_residual_sibling_token():   # A1: fail-closed token gate
+    # status_map omitted -> resolution skipped (the vlookup-leak path). The gate must
+    # refuse rather than ship a raw href="ae:sibling:..." to a live post.
+    cr=responses.post(f"{WP}/posts", json={"id":1}, status=201)
+    with pytest.raises(ValueError, match="ae:sibling"):
+        publish_article(wp(),"u","s","T",'<a href="ae:sibling:foo">F</a>',{},
+            "2026-06-01T09:00:00",5,1)
+    assert cr.call_count==0     # no WP write — gate runs before find/create
+
+@responses.activate
+def test_publish_aborts_on_residual_img_token():       # A1: gate also covers ae:img:
+    # images_dir omitted -> inline media not resolved -> ae:img: would ship raw.
+    cr=responses.post(f"{WP}/posts", json={"id":1}, status=201)
+    with pytest.raises(ValueError, match="ae:img"):
+        publish_article(wp(),"u","s","T",'<img src="ae:img:x.jpg">',{},
+            "2026-06-01T09:00:00",5,1, status_map={})
+    assert cr.call_count==0
+
+def test_inject_toc_adds_nav_and_anchors():            # B6: publish-time TOC + H2 anchors
+    html=('<h1>T</h1><p>intro</p>'
+          '<h2>First Section</h2><p>a</p>'
+          '<h2>Second Section</h2><p>b</p>'
+          '<h2>Third Bit</h2><p>c</p>')
+    out=inject_toc(html, min_h2=3)
+    assert '<h2 id="first-section">First Section</h2>' in out
+    assert '<h2 id="second-section">Second Section</h2>' in out
+    assert 'class="ae-toc"' in out
+    assert '#first-section' in out and '>First Section</a>' in out
+    assert out.index('ae-toc') < out.index('id="first-section"')   # TOC sits before content
+
+def test_inject_toc_skips_when_too_few_h2():           # short posts get no TOC
+    html='<h1>T</h1><h2>Only One</h2><p>x</p>'
+    assert inject_toc(html, min_h2=3)==html
+
+def test_inject_toc_idempotent_and_unique_anchors():   # ADVERSARIAL: re-publish must not double
+    html=('<h1>T</h1><p>i</p><h2>Same Name</h2><p>x</p>'
+          '<h2>Same Name</h2><p>y</p><h2>Other</h2><p>z</p>')
+    once=inject_toc(html, min_h2=3)
+    assert once.count('class="ae-toc"')==1
+    assert 'id="same-name"' in once and 'id="same-name-1"' in once  # collisions disambiguated
+    assert inject_toc(once, min_h2=3)==once                          # second pass is a no-op
+
+@responses.activate
+def test_publish_injects_toc_into_long_post():         # B6: wired through publish
+    responses.get(f"{AE}/find", status=404)
+    responses.get(f"{WP}/posts", json=[], status=200)
+    responses.post(f"{WP}/posts", json={"id":400}, status=201)
+    html='<h1>T</h1><p>i</p><h2>Alpha</h2><p>a</p><h2>Beta</h2><p>b</p><h2>Gamma</h2><p>c</p>'
+    publish_article(wp(),"u","s","T",html,{}, "2026-06-01T09:00:00",5,1, status_map={})
+    body=responses.calls[-1].request.body            # body is JSON -> quotes are escaped
+    assert b'ae-toc' in body and b'#alpha' in body and b'>Alpha</a>' in body
+
+@responses.activate
+def test_update_live_post_publishes_not_futures():     # A2: status/date-aware backfill
+    # Re-publishing an already-live post must not downgrade it to a future-dated draft.
+    responses.get(f"{AE}/find", json={"id":17434}, status=200)
+    up=responses.post(f"{WP}/posts/17434", json={"id":17434}, status=200)
+    publish_article(wp(),"u","s","T","<p>b</p>",{}, "2026-05-22T09:00:00",5,1,
+                    status_map={}, wp_status="publish")
+    body=responses.calls[-1].request.body
+    assert b'"publish"' in body and b'"future"' not in body and up.call_count==1

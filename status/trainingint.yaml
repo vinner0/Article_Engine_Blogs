@@ -8,43 +8,48 @@ how-to-create-pivot-tables-in-excel:
   scheduled_date: '2026-05-27T09:00:00'
   status: scheduled
   title: How to Create a Pivot Table in Excel (Step-by-Step Guide)
-  url: null
+  url: https://www.trainingint.com/?p=17440
   wp_post_id: 17440
 how-to-filter-data-in-excel-step-by-step:
   scheduled_date: 2026-05-21
-  status: scheduled
-  url: https://www.trainingint.com/?p=17421
+  status: published
+  url: https://www.trainingint.com/how-to-filter-data-in-excel-step-by-step.html
   wp_post_id: 17421
 how-to-use-copilot-in-excel:
   scheduled_date: '2026-05-29T09:00:00+08:00'
   status: scheduled
   title: 'How to Use Copilot in Excel: A Practical Singapore Guide'
   wp_post_id: 17469
+  url: https://www.trainingint.com/?p=17469
 how-to-use-copilot-in-outlook:
   scheduled_date: '2026-05-21T09:00:00'
-  status: scheduled
+  status: published
   wp_post_id: 17478
+  url: https://www.trainingint.com/how-to-use-copilot-in-outlook.html
 how-to-use-copilot-in-powerpoint:
   scheduled_date: '2026-05-26T09:00:00+08:00'
   status: scheduled
   wp_post_id: 17454
+  url: https://www.trainingint.com/?p=17454
 how-to-use-copilot-in-teams:
   scheduled_date: '2026-05-21T09:00:00'
-  status: scheduled
+  status: published
   wp_post_id: 17428
+  url: https://www.trainingint.com/how-to-use-copilot-in-teams.html
 how-to-use-copilot-in-word:
   scheduled_date: '2026-05-28'
   status: scheduled
   title: 'How to Use Copilot in Word: Step-by-Step (Real Prompts)'
-  url: null
+  url: https://www.trainingint.com/?p=17463
   wp_post_id: 17463
 how-to-use-sumif-and-sumifs-in-excel:
   scheduled_date: '2026-06-01T09:00:00+08:00'
   status: scheduled
   title: How to Use SUMIF and SUMIFS in Excel (Step-by-Step)
-  url: null
+  url: https://www.trainingint.com/?p=17490
   wp_post_id: 17490
 how-to-use-vlookup-and-xlookup-in-excel:
   scheduled_date: '2026-05-22T09:00:00+08:00'
-  status: scheduled
+  status: published
   wp_post_id: 17434
+  url: https://www.trainingint.com/how-to-use-vlookup-and-xlookup-in-excel.html

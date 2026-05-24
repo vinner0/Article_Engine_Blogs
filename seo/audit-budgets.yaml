@@ -1,6 +1,6 @@
 # Per-pass budget caps for blog-5-audit-existing.
 # If a pass would exceed any cap, abort and flag for manual review.
-internal_links_max: 4
+internal_links_max: 12   # bumped 4->12 (SEO audit 2026-05-24): inline siblings + course links + Related-Articles block
 images_max: 3
 freshness_edits_max: 10
 
