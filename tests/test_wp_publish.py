@@ -250,3 +250,14 @@ def test_assert_jsonld_valid_rejects_extra_data():   # production-shaped: the re
 def test_assert_jsonld_valid_ignores_non_ldjson_scripts():
     html = '<script>var x=1;</script><p>no ld+json here</p>'
     assert_jsonld_valid(html, "slug")          # must NOT raise (no ld+json blocks)
+
+@responses.activate
+def test_publish_aborts_on_malformed_jsonld():   # C: gate wired into publish, before any WP write
+    body = ('<p>x</p><script type="application/ld+json">'
+            '{"@type":"FAQPage"}<\\/script></p><div>junk</script>')   # JSON + trailing markup
+    with pytest.raises(ValueError, match="JSON-LD"):
+        publish_article(wp(), "uid1", "how-to-x", "T", body, {},
+                        "2026-06-01T09:00:00", 5, 1)
+    # ADVERSARIAL: remove the assert_jsonld_valid wiring line and publish_article reaches
+    # find_post_by_uid -> an unmocked HTTP call (ConnectionError, not our ValueError) -> fails.
+    assert len(responses.calls) == 0   # gate fires BEFORE any WP read/write
