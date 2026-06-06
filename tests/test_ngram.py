@@ -27,3 +27,37 @@ def test_overlap_dedupes_repeated_match():        # ADVERSARIAL: list (dup) fail
     art=rep+". filler words in between here. "+rep+"."
     o=overlap_8gram(art, rep)
     assert o and len(o)==len(set(o))
+
+# --- prose-only gate (2026-06: exclude non-prose metadata + code) ---
+def test_overlap_ignores_yaml_frontmatter():
+    # The post title (frontmatter) MUST carry the primary keyword, which also appears
+    # in a competitor's title. That metadata match is not plagiarised prose.
+    art=('---\ntitle: How to Make a Gantt Chart in Excel a Step by Step Guide\n'
+         'slug: x\n---\n<p>Wholly original body that shares no long phrase with them.</p>')
+    src='how to make a gantt chart in excel a step by step guide for beginners'
+    assert overlap_8gram(art, src) == []
+def test_overlap_ignores_comment_wrapped_frontmatter():
+    art=('<!--\n---\ntitle: How to Make a Gantt Chart in Excel a Step by Step Guide\n'
+         '---\n-->\n<p>Wholly original body that shares no long phrase with them.</p>')
+    src='how to make a gantt chart in excel a step by step guide for beginners'
+    assert overlap_8gram(art, src) == []
+def test_overlap_ignores_code_blocks():
+    formula='IF AND B2 greater 90 C2 greater 5 then Bonus else Review else None always'
+    art='<p>Use the nested formula below.</p><pre>'+formula+'</pre>'
+    src='some preamble '+formula+' some trailing words'
+    assert overlap_8gram(art, src) == []   # only the code is shared, not prose
+def test_overlap_ignores_markdown_fenced_code():
+    formula='SUMIFS range one criteria one range two criteria two and so on forever now'
+    art='Intro prose here.\n\n```\n'+formula+'\n```\n\nmore unique prose.'
+    src='blah '+formula+' blah'
+    assert overlap_8gram(art, src) == []
+def test_overlap_still_flags_real_body_plagiarism_despite_frontmatter():
+    art=('---\ntitle: Anything\n---\n<p>experts agree you should always proofread '
+         'your email before you hit the send button</p>')
+    src='you should always proofread your email before you hit the send button now'
+    assert overlap_8gram(art, src)   # true positive must survive the prose-only change
+def test_voice_survival_ignores_frontmatter_title_change():
+    body=('the quick brown fox jumps over the lazy dog again and again and again here now')
+    voice='---\ntitle: alpha beta gamma delta epsilon zeta eta theta iota kappa\n---\n'+body
+    seo='---\ntitle: one two three four five six seven eight nine ten eleven\n---\n<p>'+body+'</p>'
+    assert voice_survival_ratio(seo, voice) >= 0.85  # only allowed title edit changed
