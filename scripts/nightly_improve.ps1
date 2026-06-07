@@ -50,8 +50,8 @@ foreach ($site in $sites) {
     try {
         $out = & $PYTHON -m scripts.triage $site 2>&1
         $out | ForEach-Object { Log "  $_" }
-        $triageJsonPaths[$site] = Join-Path $ROOT "status" "triage-$site-$DATE.json"
-        Log "$site triage OK → $($triageJsonPaths[$site])"
+        $triageJsonPaths[$site] = "$ROOT\status\triage-$site-$DATE.json"
+        Log "$site triage OK -> $($triageJsonPaths[$site])"
     } catch {
         Log "ERROR triaging ${site}: $_"
         $triageJsonPaths[$site] = $null
@@ -71,7 +71,7 @@ try {
     $claudeVersion = & $CLAUDE --version 2>&1
     Log "claude CLI: $claudeVersion"
 } catch {
-    Log "ERROR: claude CLI not found — skipping Phase 2. Add claude to PATH or set AE_SKIP_LLM=1."
+    Log "ERROR: claude CLI not found - skipping Phase 2. Add claude to PATH or set AE_SKIP_LLM=1."
     Log "=== nightly_improve done (Phase 1 only) ==="
     exit 0
 }
@@ -81,13 +81,13 @@ $allDigestLines = @()
 foreach ($site in $sites) {
     $jsonPath = $triageJsonPaths[$site]
     if (-not $jsonPath -or -not (Test-Path $jsonPath)) {
-        Log "$site: no triage JSON — skipping Phase 2 for this site"
+        Log "${site}: no triage JSON - skipping Phase 2 for this site"
         continue
     }
 
     $triage = Get-Content $jsonPath -Raw | ConvertFrom-Json
     $candidates = $triage.ranked | Select-Object -First $TOP_K
-    Log "$site: top-$TOP_K candidates for improvement"
+    Log "${site}: top-$TOP_K candidates for improvement"
 
     $siteDigestLines = @()
 
@@ -98,9 +98,9 @@ foreach ($site in $sites) {
         $findings = ($article.findings | ConvertTo-Json -Compress)
 
         # Idempotency: skip if _improve/ already staged
-        $improvePath = Join-Path $ROOT "content" $site $slug "_improve" "04-seo.html"
+        $improvePath = "$ROOT\content\$site\$slug\_improve\04-seo.html"
         if (Test-Path $improvePath) {
-            Log "  [skip] $slug — already staged, awaiting apply"
+            Log "  [skip] $slug - already staged, awaiting apply"
             continue
         }
 
@@ -108,12 +108,18 @@ foreach ($site in $sites) {
         $prompt = "Invoke the ae-5-improve-existing skill. Site: $site, Slug: $slug, Status: $status, Findings: $findings"
 
         try {
-            $result = & $CLAUDE --print $prompt --allowedTools "Bash,Read,Write,Edit,Glob" 2>&1
+            $savedEAP = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            $result = & $CLAUDE --print $prompt --allowedTools "Bash,Read,Write,Edit,Glob" 2>$null
+            $ErrorActionPreference = $savedEAP
+
             $resultText = $result -join "`n"
 
-            # Parse signal line (last [ae5-ok] or [ae5-skip] in output)
-            $okLine   = ($result | Where-Object { $_ -match '^\[ae5-ok\]' }   | Select-Object -Last 1)
-            $skipLine = ($result | Where-Object { $_ -match '^\[ae5-skip\]' } | Select-Object -Last 1)
+            # Parse signal line (last [ae5-ok] or [ae5-skip] in output); strip markdown backticks
+            $okLine   = ($result | Where-Object { $_ -match '\[ae5-ok\]' }   | Select-Object -Last 1)
+            $skipLine = ($result | Where-Object { $_ -match '\[ae5-skip\]' } | Select-Object -Last 1)
+            if ($okLine)   { $okLine   = $okLine.Trim('`').Trim() }
+            if ($skipLine) { $skipLine = $skipLine.Trim('`').Trim() }
 
             if ($okLine) {
                 $siteDigestLines += $okLine
@@ -121,13 +127,13 @@ foreach ($site in $sites) {
             } elseif ($skipLine) {
                 Log "  SKIP: $skipLine"
             } else {
-                Log "  WARN: $slug — no [ae5-ok/skip] signal from ae5"
-                Log "  --- ae5 output ---"
+                Log "  WARN: $slug - no [ae5-ok/skip] signal from ae5"
+                Log "  --- ae5 output (last 10 lines) ---"
                 $result | Select-Object -Last 10 | ForEach-Object { Log "    $_" }
                 Log "  --- end ae5 output ---"
             }
         } catch {
-            Log "  ERROR: $slug — claude invocation failed: $_"
+            Log "  ERROR type=$($_.GetType().Name): $slug - claude invocation failed: $_"
         }
     }
 
@@ -139,16 +145,16 @@ foreach ($site in $sites) {
 # ─── files live on disk as staging. Only the digest lands in git.)            ────
 
 if ($allDigestLines.Count -gt 0) {
-    $digestPath = Join-Path $ROOT "status" "review-$DATE.md"
+    $digestPath = "$ROOT\status\review-$DATE.md"
     $digestLines = @(
-        "# Improvement Review — $DATE",
+        "# Improvement Review - $DATE",
         "",
         "Review each entry below, then apply the ones you approve:",
-        "  python -m scripts.apply_improvement trainingint <slug> [slug...]",
+        "  python -m scripts.apply_improvement trainingint SLUG [SLUG...]",
         ""
     )
     $digestLines += $allDigestLines
-    $digestLines += @("", "---", "_improve/ files written to content/<site>/<slug>/_improve/04-seo.html — apply or delete to clean up.")
+    $digestLines += @("", "---", "_improve/ files written to content/<site>/<slug>/_improve/04-seo.html - apply or delete to clean up.")
     ($digestLines -join "`n") | Set-Content $digestPath -Encoding utf8
     Log "Wrote $digestPath"
 
@@ -158,7 +164,7 @@ if ($allDigestLines.Count -gt 0) {
         & git commit -m $commitMsg 2>&1 | ForEach-Object { Log "  git: $_" }
         Log "Committed digest to master. Review: status/review-$DATE.md"
     } catch {
-        Log "WARN: git commit failed — digest written but not committed: $_"
+        Log "WARN: git commit failed - digest written but not committed: $_"
     }
 
     Log "Apply: python -m scripts.apply_improvement trainingint <slug> [slug...]"
