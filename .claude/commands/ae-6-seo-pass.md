@@ -37,6 +37,7 @@ You are running **Stage 6** of the Article Engine pipeline (trainingint.com) for
 - **Styled course card (peak intent):** insert one `scripts.lib.blocks.render_course_card(title, url, funding, cta_label, subtitle)` block at the highest-intent moment (e.g. right after a comparison table or the core how-to). `funding` is the stable badge ("WSQ-funded · SkillsFuture-eligible"); do NOT hardcode price/next-intake (they go stale — the CTA links to the live course page where those are authoritative).
 - **Authoritative outbound:** 1–3 (SSG, MOM, HBR, MS Learn, peer-reviewed), `target="_blank" rel="noopener"`, never `rel="sponsored"`.
 - **Snippet-bait checks**: TL;DR/answer-first paragraph in first 100 words, table or list under at least one H2, FAQ block present
+- **Heading hierarchy**: Use `<h2>` (not `<h1>`) as the top-level heading in the HTML body. WordPress renders the post `title:` (from frontmatter) as the page `<h1>` — any `<h1>` in the body creates a duplicate. All top-level article sections start at `<h2>`.
 - **Table of contents:** do NOT hand-author — scripts/wp_publish.py injects a jumplink TOC + adds slug `id` anchors to every `<h2>` at publish for posts with ≥3 H2s (deterministic + idempotent, so it applies uniformly to backfilled and future posts).
 - **Image alt check**: every image has 8–80 char **specific** alt — name the actual subject/action + the keyword context (e.g. "VLOOKUP formula matching an order ID across two Excel sheets"), NOT generic stock ("hands typing on a laptop"). Hero alt is rich (subjects + setting + tone). Prefer slug-style, keyword-bearing filenames.
 - **Inline images:** reference every inline image as `<img src="ae:img:<filename>" alt="<descriptive alt>">` where `<filename>` is the file in `content/trainingint/$ARGUMENTS/images/` (hero stays the featured image, set at publish). This mirrors the `ae:sibling:` placeholder — scripts/wp_publish.py uploads each referenced image to WP media and rewrites the src to the live URL at publish (spec §8.2). Never emit a raw local path or an un-prefixed remote Pexels URL in the body.
@@ -83,7 +84,8 @@ If any serp-body returns a non-empty overlap list, STOP, name the overlapping 8-
 6. **Gate 2 — n-gram anti-plagiarism:** run `overlap_8gram` vs every `_research/serp-bodies/*.txt`; if any non-empty: delete the candidate `04-seo.html`, name the phrase, STOP
 7. **Gate 3 — link budget:** run `validate_links(inv, budget)`; if any violations: fix and re-write the candidate, then re-run gates 1-3 (do not proceed with a violating file)
 8. **Gate 4 — originality:** run `originality_report(...)`; if `passes` is False: delete the candidate `04-seo.html`, surface to the user, STOP
-9. All four gates passed → `04-seo.html` stands (already on disk)
+9. **Gate 5 — body_h1_absent (auto-fix):** `python -c "from scripts.audit_live import audit_artifact_html; import pathlib; r=[c for c in audit_artifact_html(pathlib.Path('content/trainingint/$ARGUMENTS/_draft/04-seo.html').read_text()) if c['check']=='body_h1_absent'][0]; print('PASS' if r['ok'] else r['detail'])"` — if not passing, apply `from scripts.wp_publish import strip_body_h1` to the candidate file's HTML body (do NOT delete the file; this is an auto-fix). Re-check after fixing.
+10. All five gates passed → `04-seo.html` stands (already on disk)
 10. Run the 80-item checklist; write `_audit/seo-checklist.md`
 
 ## Refuse to proceed if

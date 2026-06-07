@@ -62,9 +62,9 @@ def _freshness_days(entry):
     return max(0, (date.today() - date.fromisoformat(str(li))).days)
 
 
-def _gsc_signals(page_url, gsc_page_data):
+def _gsc_signals(page_url, gsc_page_data, min_impressions=10):
     rows = gsc_page_data.get(page_url, [])
-    striking = [r for r in rows if 5 <= r["position"] <= 20]
+    striking = [r for r in rows if 5 <= r["position"] <= 20 and r["impressions"] >= min_impressions]
     hi_impr_lo_ctr = [r for r in rows if r["impressions"] >= 100 and r["ctr"] < 0.02]
     # sort striking by impressions descending so most impactful surface first
     striking.sort(key=lambda r: r["impressions"], reverse=True)
