@@ -5,556 +5,70 @@
     {
       "slug": "advanced-powerpoint-animation-techniques",
       "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
+      "score": 12.17,
+      "audit_errors": 0,
       "link_gap": 0,
       "freshness_days": 365,
       "gsc_score": 0.0,
       "striking_count": 0,
       "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
         "[freshness] never improved"
       ]
     },
     {
       "slug": "canva-tutorial-for-beginners",
       "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
+      "score": 12.17,
+      "audit_errors": 0,
       "link_gap": 0,
       "freshness_days": 365,
       "gsc_score": 0.0,
       "striking_count": 0,
       "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "essential-excel-formulas-every-finance-professional-needs",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
         "[freshness] never improved"
       ]
     },
     {
       "slug": "how-to-add-animations-in-powerpoint",
       "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
+      "score": 12.17,
+      "audit_errors": 0,
       "link_gap": 0,
       "freshness_days": 365,
       "gsc_score": 0.0,
       "striking_count": 0,
       "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
         "[freshness] never improved"
       ]
     },
     {
       "slug": "how-to-add-speaker-notes-in-powerpoint",
       "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
+      "score": 12.17,
+      "audit_errors": 0,
       "link_gap": 0,
       "freshness_days": 365,
       "gsc_score": 0.0,
       "striking_count": 0,
       "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
         "[freshness] never improved"
       ]
     },
     {
       "slug": "how-to-add-transitions-in-powerpoint",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-create-a-powerpoint-with-copilot",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-create-drop-down-lists-in-excel",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-create-pivot-tables-in-excel",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-design-a-presentation-in-canva",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-export-power-bi-to-powerpoint",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-install-power-automate-desktop",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-loop-a-powerpoint-presentation",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-make-a-gantt-chart-in-excel",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-make-a-presentation-in-powerpoint",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-make-money-with-canva",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-remove-a-background-in-canva",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-send-emails-with-power-automate",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-share-a-power-automate-desktop-flow",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-canva",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-copilot",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-copilot-in-outlook",
-      "status": "published",
-      "score": 15.17,
-      "audit_errors": 0,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 3.0,
-      "striking_count": 3,
-      "findings": [
-        "[freshness] never improved",
-        "[gsc] pos 8.0: \"copilot icon missing from word\" (1 impr, 0.0% CTR)",
-        "[gsc] pos 19.0: \"copilot not working in word\" (1 impr, 0.0% CTR)",
-        "[gsc] pos 16.0: \"how to use copilot in outlook app\" (1 impr, 0.0% CTR)"
-      ]
-    },
-    {
-      "slug": "how-to-use-copilot-in-powerpoint",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-copilot-in-teams",
-      "status": "published",
-      "score": 15.17,
-      "audit_errors": 0,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 3.0,
-      "striking_count": 3,
-      "findings": [
-        "[freshness] never improved",
-        "[gsc] pos 7.0: \"attendee\" (1 impr, 0.0% CTR)",
-        "[gsc] pos 7.0: \"copilot prompts for work -site:youtube.com -site:reddit.com -site:x.com -site:twitter.com -site:facebook.com -site:instagram.com -site:tiktok.com -site:linkedin.com -site:pinterest.com -site:nytimes.com -site:wsj.com -site:yelp.com -site:rottentomatoes.com\" (1 impr, 0.0% CTR)",
-        "[gsc] pos 7.0: \"teams catch up button\" (1 impr, 0.0% CTR)"
-      ]
-    },
-    {
-      "slug": "how-to-use-copilot-in-word",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-copilot-to-take-meeting-notes",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-multiple-if-statements-in-excel",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-power-automate",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-powerpoint",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-presenter-view-in-powerpoint",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-use-sumif-and-sumifs-in-excel",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-write-a-business-email",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-write-a-formal-email",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-write-a-professional-email",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-write-an-apology-email-at-work",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "power-bi-best-practices",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "power-bi-how-to-guide-for-beginners",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "power-bi-quick-measures-explained",
-      "status": "scheduled",
-      "score": 15.17,
-      "audit_errors": 1,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[audit] body_h1_absent: found 1 body <h1> (will duplicate the WP title H1)",
-        "[freshness] never improved"
-      ]
-    },
-    {
-      "slug": "how-to-filter-data-in-excel-step-by-step",
-      "status": "published",
-      "score": 14.17,
-      "audit_errors": 0,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 2.0,
-      "striking_count": 2,
-      "findings": [
-        "[freshness] never improved",
-        "[gsc] pos 10.3: \"filter digunakan untuk\u2026 a. menyembunyikan/menampilkan data tertentu b. menghapus seluruh data c. mengubah warna d. mengacak data\" (3 impr, 0.0% CTR)",
-        "[gsc] pos 11.0: \"fitur yang berfungsi menampilkan hanya data tertentu sesuai kriteria yang digunakan disebut * filter sortir salin hapus\" (3 impr, 0.0% CTR)"
-      ]
-    },
-    {
-      "slug": "how-to-use-vlookup-and-xlookup-in-excel",
-      "status": "published",
-      "score": 13.17,
-      "audit_errors": 0,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 1.0,
-      "striking_count": 1,
-      "findings": [
-        "[freshness] never improved",
-        "[gsc] pos 6.0: \"how to use xlookup\" (1 impr, 0.0% CTR)"
-      ]
-    },
-    {
-      "slug": "essential-excel-formulas-every-finance-professional-needs",
       "status": "scheduled",
       "score": 12.17,
       "audit_errors": 0,
@@ -580,7 +94,202 @@
       ]
     },
     {
+      "slug": "how-to-create-a-powerpoint-with-copilot",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-create-drop-down-lists-in-excel",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-create-pivot-tables-in-excel",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-design-a-presentation-in-canva",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
       "slug": "how-to-edit-pdfs-in-canva",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-export-power-bi-to-powerpoint",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-filter-data-in-excel-step-by-step",
+      "status": "published",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-install-power-automate-desktop",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-loop-a-powerpoint-presentation",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-make-a-gantt-chart-in-excel",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-make-a-presentation-in-powerpoint",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-make-money-with-canva",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-remove-a-background-in-canva",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-send-emails-with-power-automate",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-share-a-power-automate-desktop-flow",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-canva",
       "status": "scheduled",
       "score": 12.17,
       "audit_errors": 0,
@@ -606,6 +315,19 @@
       ]
     },
     {
+      "slug": "how-to-use-copilot",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
       "slug": "how-to-use-copilot-in-excel",
       "status": "scheduled",
       "score": 12.17,
@@ -619,7 +341,163 @@
       ]
     },
     {
+      "slug": "how-to-use-copilot-in-outlook",
+      "status": "published",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-copilot-in-powerpoint",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-copilot-in-teams",
+      "status": "published",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-copilot-in-word",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-copilot-to-take-meeting-notes",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-multiple-if-statements-in-excel",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-power-automate",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-powerpoint",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-presenter-view-in-powerpoint",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-sumif-and-sumifs-in-excel",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-use-vlookup-and-xlookup-in-excel",
+      "status": "published",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
       "slug": "how-to-use-what-if-analysis-in-excel",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-write-a-business-email",
       "status": "scheduled",
       "score": 12.17,
       "audit_errors": 0,
@@ -645,7 +523,85 @@
       ]
     },
     {
+      "slug": "how-to-write-a-formal-email",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-write-a-professional-email",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-write-an-apology-email-at-work",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "power-bi-best-practices",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
       "slug": "power-bi-data-visualization-guide",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "power-bi-how-to-guide-for-beginners",
+      "status": "scheduled",
+      "score": 12.17,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 365,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "power-bi-quick-measures-explained",
       "status": "scheduled",
       "score": 12.17,
       "audit_errors": 0,
