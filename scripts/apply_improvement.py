@@ -15,8 +15,14 @@ Cleans up _improve/ after applying.
 
 Nothing auto-runs without an explicit slug argument.
 """
-import shutil, sys, pathlib, yaml
+import shutil, sys, pathlib, yaml, io
 from datetime import date
+
+# Windows console (cp1252) can't render non-ASCII in print; force UTF-8
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -57,7 +63,7 @@ def apply_slug(site, slug, status_map, dry_run=False):
 
     # Copy improved file over draft
     shutil.copy2(improve_src, draft_dst)
-    print(f"  COPY {slug}: _improve/04-seo.html → _draft/04-seo.html")
+    print(f"  COPY {slug}: _improve/04-seo.html -> _draft/04-seo.html")
 
     # Re-publish if live
     if article_status == "published":
