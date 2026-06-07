@@ -172,19 +172,6 @@
       ]
     },
     {
-      "slug": "how-to-filter-data-in-excel-step-by-step",
-      "status": "published",
-      "score": 12.17,
-      "audit_errors": 0,
-      "link_gap": 0,
-      "freshness_days": 365,
-      "gsc_score": 0.0,
-      "striking_count": 0,
-      "findings": [
-        "[freshness] never improved"
-      ]
-    },
-    {
       "slug": "how-to-install-power-automate-desktop",
       "status": "scheduled",
       "score": 12.17,
@@ -611,6 +598,19 @@
       "striking_count": 0,
       "findings": [
         "[freshness] never improved"
+      ]
+    },
+    {
+      "slug": "how-to-filter-data-in-excel-step-by-step",
+      "status": "published",
+      "score": 0.0,
+      "audit_errors": 0,
+      "link_gap": 0,
+      "freshness_days": 0,
+      "gsc_score": 0.0,
+      "striking_count": 0,
+      "findings": [
+        "[freshness] last improved 0d ago"
       ]
     }
   ]
