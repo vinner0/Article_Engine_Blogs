@@ -21,6 +21,14 @@ relevance_weights:
 words_per_image: 400
 require_above_fold_image: true
 
+# Triage scoring weights (triage.py)
+# score = audit*errors + link_gap*gap + freshness*(days/30) + gsc*gsc_score
+triage_weights:
+  audit: 3.0       # per failed error check
+  link_gap: 2.0    # per missing internal sibling link
+  freshness: 1.0   # multiplied by days_since_improved/30
+  gsc: 1.0         # multiplied by striking-distance + slip count
+
 # Sitemaps to crawl for course-page candidates
 external_sitemaps:
   - https://www.intellisoft.com.sg/sitemap.xml

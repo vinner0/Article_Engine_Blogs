@@ -1,6 +1,7 @@
 sites:
   trainingint:
     base_url: https://www.trainingint.com
+    gsc_property: https://www.trainingint.com/
     wp_api_base: https://www.trainingint.com/wp-json/wp/v2
     ae_api_base: https://www.trainingint.com/wp-json/ae/v1
     app_password_env: WP_TRAININGINT
