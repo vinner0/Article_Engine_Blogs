@@ -15,6 +15,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $ROOT = Split-Path -Parent $PSScriptRoot
+Set-Location $ROOT   # schtasks launches from system32; scripts.triage requires repo root as CWD
 $LOG_DIR = Join-Path $ROOT "logs"
 $PYTHON = "python"
 
