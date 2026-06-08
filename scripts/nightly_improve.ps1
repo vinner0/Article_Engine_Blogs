@@ -38,6 +38,57 @@ function Log($msg) {
     Add-Content -Path $LOG -Value $line -Encoding utf8
 }
 
+# ─── Email notification setup ─────────────────────────────────────────────────
+# Headless Task Scheduler runs cannot use an interactive Claude.ai Gmail MCP, so
+# this sends directly via Gmail SMTP. Requires a Gmail App Password (2FA must be
+# on) in credentials\.env:  GMAIL_USER=you@gmail.com  GMAIL_APP_PASSWORD=xxxx...
+# No creds -> email is silently skipped; the run is unaffected.
+
+function Get-DotEnv($path) {
+    $h = @{}
+    if (Test-Path $path) {
+        foreach ($line in Get-Content $path) {
+            if ($line -match '^\s*#') { continue }
+            if ($line -match '^\s*([^=]+?)\s*=\s*(.*)$') { $h[$Matches[1].Trim()] = $Matches[2].Trim() }
+        }
+    }
+    return $h
+}
+
+$envVars    = Get-DotEnv (Join-Path $ROOT "credentials\.env")
+$GMAIL_USER = $envVars['GMAIL_USER']
+$GMAIL_PASS = if ($envVars['GMAIL_APP_PASSWORD']) { $envVars['GMAIL_APP_PASSWORD'] -replace '\s','' } else { $null }
+$NOTIFY_TO  = if ($env:AE_NOTIFY_TO) { $env:AE_NOTIFY_TO } else { "vinaip@gmail.com" }
+$NOTIFY_CC  = if ($env:AE_NOTIFY_CC) { $env:AE_NOTIFY_CC } else { "vinai@intellisoft.com.sg" }
+
+function Send-CompletionEmail($subject, $body) {
+    if (-not $GMAIL_USER -or -not $GMAIL_PASS) {
+        Log "EMAIL skipped: set GMAIL_USER + GMAIL_APP_PASSWORD in credentials\.env to enable notifications"
+        return
+    }
+    try {
+        $sec  = ConvertTo-SecureString $GMAIL_PASS -AsPlainText -Force
+        $cred = New-Object System.Management.Automation.PSCredential($GMAIL_USER, $sec)
+        $params = @{
+            From       = $GMAIL_USER
+            To         = $NOTIFY_TO
+            Subject    = $subject
+            Body       = $body
+            SmtpServer = "smtp.gmail.com"
+            Port       = 587
+            UseSsl     = $true
+            Credential = $cred
+            Encoding   = ([System.Text.Encoding]::UTF8)   # PS 5.1: em-dashes in ae5 summaries mangle without this
+            ErrorAction = "Stop"
+        }
+        if ($NOTIFY_CC) { $params.Cc = $NOTIFY_CC }
+        Send-MailMessage @params
+        Log "EMAIL sent to $NOTIFY_TO$(if ($NOTIFY_CC) { " (cc $NOTIFY_CC)" })"
+    } catch {
+        Log "EMAIL failed: $_"
+    }
+}
+
 Log "=== nightly_improve start (Phase 1+2) ==="
 
 # ─── Phase 1: triage ──────────────────────────────────────────────────────────
@@ -77,6 +128,7 @@ try {
 }
 
 $allDigestLines = @()
+$stagedRecords  = @()   # rich per-article records for the completion email
 
 foreach ($site in $sites) {
     $jsonPath = $triageJsonPaths[$site]
@@ -121,9 +173,18 @@ foreach ($site in $sites) {
             if ($okLine)   { $okLine   = $okLine.Trim('`').Trim() }
             if ($skipLine) { $skipLine = $skipLine.Trim('`').Trim() }
 
-            if ($okLine) {
+            if ($okLine -and (Test-Path $improvePath)) {
                 $siteDigestLines += $okLine
+                $stagedRecords += [pscustomobject]@{
+                    site    = $site
+                    slug    = $slug
+                    status  = $status
+                    summary = ($okLine -replace '\[ae5-ok\]\s*', '')
+                }
                 Log "  OK: $okLine"
+            } elseif ($okLine) {
+                # Signal says ok but ae5 left no staged file — don't stage/email a dead path
+                Log "  WARN: $slug - [ae5-ok] signal but no _improve\04-seo.html on disk; not staged"
             } elseif ($skipLine) {
                 Log "  SKIP: $skipLine"
             } else {
@@ -170,6 +231,87 @@ if ($allDigestLines.Count -gt 0) {
     Log "Apply: python -m scripts.apply_improvement trainingint <slug> [slug...]"
 } else {
     Log "No improvements staged tonight"
+}
+
+# ─── Completion email (only when something is staged) ─────────────────────────
+
+$errCount = (Get-Content $LOG | Where-Object { $_ -match '\b(ERROR|WARN)\b' }).Count
+$nStaged  = $stagedRecords.Count
+
+if ($nStaged -gt 0) {
+    # Pull title / live URL / WP edit URL per slug (grouped by site) from status yaml
+    $metaBySlug = @{}
+    foreach ($grp in ($stagedRecords | Group-Object site)) {
+        $slugList = @($grp.Group | ForEach-Object { $_.slug })
+        try {
+            $json = & $PYTHON -m scripts.slug_meta $grp.Name @slugList 2>$null
+            $obj  = ($json -join "`n") | ConvertFrom-Json
+            foreach ($s in $slugList) { $metaBySlug["$($grp.Name)/$s"] = $obj.$s }
+        } catch {
+            Log "EMAIL: slug_meta lookup failed for $($grp.Name): $_"
+        }
+    }
+
+    $body = New-Object System.Collections.Generic.List[string]
+    $body.Add("$nStaged article(s) were optimised tonight and are STAGED for your approval.")
+    $body.Add("Nothing is live yet - you decide what to apply. Details for each below.")
+    $body.Add("")
+
+    $i = 0
+    foreach ($rec in $stagedRecords) {
+        $i++
+        $m       = $metaBySlug["$($rec.site)/$($rec.slug)"]
+        $title   = if ($m -and $m.title) { $m.title } else { $rec.slug }
+        $liveUrl = if ($m) { $m.url } else { "" }
+        $editUrl = if ($m) { $m.edit_url } else { "" }
+        $sched   = if ($m) { $m.scheduled_date } else { "" }
+        $improve = "content\$($rec.site)\$($rec.slug)\_improve\04-seo.html"
+
+        $body.Add("======================================================================")
+        $body.Add("$i. $title")
+        $statusLine = "   slug: $($rec.slug)   |   status: $($rec.status)"
+        if ($rec.status -eq "scheduled" -and $sched) { $statusLine += " (auto-publishes $sched)" }
+        $body.Add($statusLine)
+        $body.Add("")
+        $body.Add("   WHAT CHANGED:")
+        $body.Add("     $($rec.summary)")
+        $body.Add("")
+        if ($liveUrl) { $body.Add("   VIEW BEFORE (current live page): $liveUrl") }
+        if ($editUrl) { $body.Add("   EDIT IN WORDPRESS:               $editUrl") }
+        $body.Add("   IMPROVED DRAFT (the 'after'):    $improve")
+        $body.Add("")
+        $body.Add("   TO APPROVE & APPLY - in PowerShell:")
+        $body.Add("     cd $ROOT")
+        $body.Add("     python -m scripts.apply_improvement $($rec.site) $($rec.slug)")
+        if ($rec.status -eq "published") {
+            $body.Add("   -> copies the improved draft and RE-PUBLISHES it live immediately.")
+            if ($liveUrl) { $body.Add("      Then refresh $liveUrl to confirm.") }
+        } else {
+            $body.Add("   -> updates the draft only; it auto-publishes on its scheduled date.")
+            $body.Add("      Nothing goes live before then. To publish sooner, edit in WordPress (link above).")
+        }
+        $body.Add("")
+        $body.Add("   TO DISCARD this change instead:")
+        $body.Add("     Remove-Item -Recurse content\$($rec.site)\$($rec.slug)\_improve")
+        $body.Add("")
+    }
+
+    $body.Add("======================================================================")
+    $body.Add("Apply several at once:")
+    $body.Add("  cd $ROOT")
+    foreach ($grp in ($stagedRecords | Group-Object site)) {
+        $sl = ($grp.Group | ForEach-Object { $_.slug }) -join ' '
+        $body.Add("  python -m scripts.apply_improvement $($grp.Name) $sl")
+    }
+    $body.Add("")
+    $body.Add("Full semantic digest: status\review-$DATE.md")
+    $body.Add("Run log:              logs\nightly-$DATE.log")
+    if ($errCount -gt 0) { $body.Add("NOTE: $errCount warning/error line(s) in tonight's log - worth a look.") }
+
+    $subject = "AE Nightly ${DATE}: $nStaged article(s) optimised - approval needed"
+    Send-CompletionEmail $subject ($body -join "`n")
+} else {
+    Log "No articles staged - completion email skipped (only sends when something is staged)"
 }
 
 Log "=== nightly_improve done ==="
