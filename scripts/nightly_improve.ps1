@@ -254,7 +254,13 @@ if ($nStaged -gt 0) {
 
     $body = New-Object System.Collections.Generic.List[string]
     $body.Add("$nStaged article(s) were optimised tonight and are STAGED for your approval.")
-    $body.Add("Nothing is live yet - you decide what to apply. Details for each below.")
+    $body.Add("Nothing is live yet - you decide what to apply.")
+    $body.Add("")
+    $body.Add("REVIEW, EDIT & APPROVE (before/after diff + buttons):")
+    $body.Add("  cd $ROOT; python -m scripts.review_server   ->  http://127.0.0.1:5001")
+    $body.Add("Stagings accumulate and persist - approve whenever you're next at your desk.")
+    $body.Add("")
+    $body.Add("Or approve from the command line (details per article below):")
     $body.Add("")
 
     $i = 0
