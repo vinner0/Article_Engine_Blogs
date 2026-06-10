@@ -57,3 +57,40 @@ def test_adopt_one_writes_artifact_and_is_idempotent(tmp_path):
     wrote2 = al.adopt_one(tmp_path, "trainingint", POST, status_map, "2026-06-10")
     assert wrote2 is False
     assert art.read_text(encoding="utf-8") == "SENTINEL"
+
+
+def _seed_project(tmp_path):
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "sites.yaml").write_text(
+        "sites:\n  trainingint:\n"
+        "    base_url: https://www.trainingint.com\n"
+        "    wp_api_base: https://www.trainingint.com/wp-json/wp/v2\n"
+        "    app_password_env: WP_TRAININGINT\n", encoding="utf-8")
+    (tmp_path / "status").mkdir()
+    # one engine-owned slug already tracked -> must NOT be re-adopted
+    (tmp_path / "status" / "trainingint.yaml").write_text(
+        yaml.dump({"how-to-use-canva": {"status": "scheduled", "wp_post_id": 17672}}),
+        encoding="utf-8")
+
+
+def test_run_adopts_only_untracked(tmp_path, monkeypatch):
+    _seed_project(tmp_path)
+    monkeypatch.setattr(al, "ROOT", tmp_path)
+    fake_posts = [
+        POST,                                                   # untracked -> adopt
+        {"id": 17672, "slug": "how-to-use-canva",               # tracked -> skip
+         "link": "x", "title": {"rendered": "Canva"},
+         "content": {"rendered": "<p>hi</p>"}, "modified": "2024-01-01"},
+    ]
+    monkeypatch.setattr(al, "_fetch_posts", lambda site: fake_posts)
+
+    adopted = al.run("trainingint")
+    assert adopted == 1
+    smap = yaml.safe_load((tmp_path / "status" / "trainingint.yaml").read_text())
+    assert smap["how-to-group-on-canva-tutorial"]["source"] == "legacy"
+    assert smap["how-to-use-canva"].get("source") != "legacy"  # tracked entry untouched
+    assert (tmp_path / "content" / "trainingint" /
+            "how-to-group-on-canva-tutorial" / "_draft" / "04-seo.html").exists()
+
+    # idempotent: a second run adopts nothing new
+    assert al.run("trainingint") == 0

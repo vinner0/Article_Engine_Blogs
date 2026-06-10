@@ -62,3 +62,57 @@ def adopt_one(root, site, post, status_map, today):
     (art_dir / "04-seo.html").write_text(build_artifact(site, post), encoding="utf-8")
     status_map[slug] = make_status_entry(post, today)
     return True
+
+
+def _load(site):
+    cfg = yaml.safe_load((ROOT / "config/sites.yaml").read_text())["sites"][site]
+    path = ROOT / "status" / f"{site}.yaml"
+    status_map = (yaml.safe_load(path.read_text(encoding="utf-8")) if path.exists() else {}) or {}
+    return cfg, status_map, path
+
+
+def _fetch_posts(site):
+    """Fetch all published posts via the WP REST client. Split out for testing."""
+    import os
+    from dotenv import load_dotenv
+    from scripts.lib.wp_client import WPClient
+    load_dotenv(ROOT / "credentials/.env")
+    cfg = yaml.safe_load((ROOT / "config/sites.yaml").read_text())["sites"][site]
+    user = os.environ.get(cfg["app_password_env"] + "_USER")
+    pw = os.environ.get(cfg["app_password_env"])
+    if not user or not pw:
+        raise RuntimeError(f"Missing {cfg['app_password_env']} credentials in .env")
+    wp = WPClient(cfg["wp_api_base"], user, pw)
+    return wp.list_published_posts()
+
+
+def run(site, limit=None):
+    """Adopt untracked published posts into status + artifacts. Returns count adopted."""
+    _cfg, status_map, path = _load(site)
+    today = date.today().isoformat()
+    posts = _fetch_posts(site)
+
+    adopted = 0
+    for post in posts:
+        if limit is not None and adopted >= limit:
+            break
+        if adopt_one(ROOT, site, post, status_map, today):
+            adopted += 1
+            print(f"  ADOPT {post['slug']} (post {post['id']})")
+
+    if adopted:
+        path.write_text(yaml.dump(status_map, allow_unicode=True, sort_keys=True),
+                        encoding="utf-8")
+    print(f"\nAdopted {adopted} legacy post(s) into status/{site}.yaml")
+    return adopted
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if not args:
+        sys.exit("Usage: python -m scripts.adopt_legacy <site> [--limit N]")
+    _site = args[0]
+    _limit = None
+    if "--limit" in args:
+        _limit = int(args[args.index("--limit") + 1])
+    run(_site, limit=_limit)
