@@ -54,3 +54,25 @@ def test_delete_post_sends_force():                # I2
     responses.delete(f"{WP}/posts/9", json={}, status=200)
     c().delete_post(9)
     assert "force=true" in responses.calls[-1].request.url.lower()
+@responses.activate
+def test_list_published_paginates_two_pages():     # collects across X-WP-TotalPages
+    page1 = [{"id": 1, "slug": "a"}, {"id": 2, "slug": "b"}]
+    page2 = [{"id": 3, "slug": "c"}]
+    responses.get(f"{WP}/posts", json=page1, status=200,
+                  headers={"X-WP-TotalPages": "2"})
+    responses.get(f"{WP}/posts", json=page2, status=200,
+                  headers={"X-WP-TotalPages": "2"})
+    posts = c().list_published_posts(per_page=2)
+    assert [p["id"] for p in posts] == [1, 2, 3]
+
+@responses.activate
+def test_list_published_single_page():
+    responses.get(f"{WP}/posts", json=[{"id": 9, "slug": "z"}], status=200,
+                  headers={"X-WP-TotalPages": "1"})
+    assert [p["id"] for p in c().list_published_posts()] == [9]
+
+@responses.activate
+def test_list_published_empty():
+    responses.get(f"{WP}/posts", json=[], status=200,
+                  headers={"X-WP-TotalPages": "0"})
+    assert c().list_published_posts() == []

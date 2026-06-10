@@ -38,3 +38,31 @@ class WPClient:
         # a cleanup failure must not raise and mask the primary result.
         requests.delete(f"{self.base}/posts/{pid}",params={"force":True},
                         auth=self.auth,timeout=self.timeout)
+    def list_published_posts(self, per_page=100):
+        """All published posts (type=post), following X-WP-TotalPages pagination.
+
+        Returns a list of raw post dicts (id, slug, link, title, content,
+        modified, meta, acf when exposed). acf/meta may be absent depending on
+        the site's REST config — callers must treat course_id as optional.
+        """
+        fields = "id,slug,link,title,content,modified,meta,acf"
+        posts, page = [], 1
+        while True:
+            r = requests.get(
+                f"{self.base}/posts",
+                params={"status": "publish", "per_page": per_page,
+                        "page": page, "_fields": fields},
+                auth=self.auth, timeout=self.timeout,
+            )
+            if r.status_code == 400:        # past the last page
+                break
+            r.raise_for_status()
+            batch = r.json()
+            if not batch:
+                break
+            posts.extend(batch)
+            total_pages = int(r.headers.get("X-WP-TotalPages", page) or page)
+            if page >= total_pages:
+                break
+            page += 1
+        return posts
