@@ -219,13 +219,24 @@ if ($allDigestLines.Count -gt 0) {
     ($digestLines -join "`n") | Set-Content $digestPath -Encoding utf8
     Log "Wrote $digestPath"
 
+    # PS 5.1: git's "LF will be replaced by CRLF" stderr warning, merged via 2>&1
+    # under the global Stop EAP, was raised as a terminating error and aborted the
+    # commit. Drop to Continue so the warning is logged, not fatal; trust exit code.
+    $savedEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     try {
-        & git add $digestPath 2>&1 | ForEach-Object { Log "  git: $_" }
+        (& git add $digestPath 2>&1) | ForEach-Object { Log "  git: $_" }
         $commitMsg = "ae5: review digest $DATE ($($allDigestLines.Count) staged)"
-        & git commit -m $commitMsg 2>&1 | ForEach-Object { Log "  git: $_" }
-        Log "Committed digest to master. Review: status/review-$DATE.md"
+        (& git commit -m $commitMsg 2>&1) | ForEach-Object { Log "  git: $_" }
+        if ($LASTEXITCODE -eq 0) {
+            Log "Committed digest to master. Review: status/review-$DATE.md"
+        } else {
+            Log "WARN: git commit exit $LASTEXITCODE - digest written but not committed"
+        }
     } catch {
         Log "WARN: git commit failed - digest written but not committed: $_"
+    } finally {
+        $ErrorActionPreference = $savedEAP
     }
 
     Log "Apply: python -m scripts.apply_improvement trainingint <slug> [slug...]"
