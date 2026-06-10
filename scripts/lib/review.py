@@ -10,6 +10,7 @@ import html
 import shutil
 import difflib
 import pathlib
+import re
 import yaml
 
 IMPROVE_REL = ("_improve", "04-seo.html")
@@ -136,3 +137,27 @@ def diff_blocks(before_text, after_text):
             rendered = f"<ins>{html.escape(after_blk)}</ins>"
         blocks.append({"type": tag, "html": rendered, "before": before_blk, "after": after_blk})
     return blocks
+
+
+_IMG_RE = re.compile(r'ae:img:([A-Za-z0-9._\-]+)')
+_SIB_RE = re.compile(r'ae:sibling:([A-Za-z0-9._\-]+)')
+
+
+def body_html(text):
+    """The HTML body with YAML frontmatter stripped, as one string."""
+    return "\n".join(_body_lines(text))
+
+
+def resolve_preview(body, site, slug, status_map):
+    """Rewrite ae:img:/ae:sibling: placeholders to preview-servable URLs.
+
+    ae:img:FILE   -> /img/<site>/<slug>/FILE  (served by the dashboard)
+    ae:sibling:SL -> the sibling's live url from status_map, or '#' if unknown.
+    """
+    def _img(m):
+        return f"/img/{site}/{slug}/{m.group(1)}"
+
+    def _sib(m):
+        return (status_map.get(m.group(1)) or {}).get("url") or "#"
+
+    return _SIB_RE.sub(_sib, _IMG_RE.sub(_img, body))

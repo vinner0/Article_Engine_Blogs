@@ -96,3 +96,23 @@ def test_reject_removes_staging(tmp_path):
     assert review.list_pending(tmp_path, ["trainingint"]) == []
     # second reject is a no-op
     assert review.reject(tmp_path, "trainingint", "advanced-powerpoint-animation-techniques") is False
+
+
+def test_body_html_strips_frontmatter():
+    txt = "---\ntitle: x\n---\n<p>hello</p>\n<p>world</p>"
+    assert review.body_html(txt) == "<p>hello</p>\n<p>world</p>"
+
+
+def test_resolve_preview_rewrites_img_and_sibling():
+    body = ('<img src="ae:img:hero.jpg" alt="h">'
+            '<a href="ae:sibling:how-to-use-canva">canva</a>')
+    smap = {"how-to-use-canva": {"url": "https://www.trainingint.com/how-to-use-canva.html"}}
+    out = review.resolve_preview(body, "trainingint", "my-slug", smap)
+    assert 'src="/img/trainingint/my-slug/hero.jpg"' in out
+    assert 'href="https://www.trainingint.com/how-to-use-canva.html"' in out
+    assert "ae:img:" not in out and "ae:sibling:" not in out
+
+
+def test_resolve_preview_unknown_sibling_falls_back_to_hash():
+    out = review.resolve_preview('<a href="ae:sibling:nope">x</a>', "trainingint", "s", {})
+    assert 'href="#"' in out
