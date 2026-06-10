@@ -62,14 +62,29 @@ def _freshness_days(entry):
     return max(0, (date.today() - date.fromisoformat(str(li))).days)
 
 
-def _gsc_signals(page_url, gsc_page_data, min_impressions=10):
-    rows = gsc_page_data.get(page_url, [])
-    striking = [r for r in rows if 5 <= r["position"] <= 20 and r["impressions"] >= min_impressions]
-    hi_impr_lo_ctr = [r for r in rows if r["impressions"] >= 100 and r["ctr"] < 0.02]
-    # sort striking by impressions descending so most impactful surface first
-    striking.sort(key=lambda r: r["impressions"], reverse=True)
-    score = len(striking) + 0.5 * len(hi_impr_lo_ctr)
-    return score, striking, hi_impr_lo_ctr
+def gsc_opportunity(rows, weights):
+    """Pure GSC opportunity scoring for one page's query rows.
+
+    Returns {score, striking, ctr_capture, clicks_total}. `striking` and
+    `ctr_capture` are impression-sorted (most impactful first).
+    """
+    if not rows:
+        return {"score": 0, "striking": [], "ctr_capture": [], "clicks_total": 0}
+    s_min = weights.get("striking_min_impr", 10)
+    c_min = weights.get("ctr_gap_min_impr", 50)
+    c_max = weights.get("ctr_gap_max_ctr", 0.03)
+    striking = sorted(
+        [r for r in rows if 5 <= r["position"] <= 20 and r["impressions"] >= s_min],
+        key=lambda r: r["impressions"], reverse=True)
+    ctr_capture = sorted(
+        [r for r in rows if r["position"] <= 10 and r["impressions"] >= c_min and r["ctr"] < c_max],
+        key=lambda r: r["impressions"], reverse=True)
+    clicks_total = sum(r.get("clicks", 0) for r in rows)
+    score = (weights.get("gsc_striking", 1.0) * len(striking)
+             + weights.get("gsc_ctr_gap", 1.5) * len(ctr_capture)
+             + weights.get("gsc_clicks", 0.5) * (clicks_total ** 0.5))
+    return {"score": score, "striking": striking, "ctr_capture": ctr_capture,
+            "clicks_total": clicks_total}
 
 
 # ── scoring ───────────────────────────────────────────────────────────────────
@@ -90,7 +105,8 @@ def score_slug(slug, entry, cfg, budgets, gsc_page_data, content_root):
     actual_links = _count_internal_links(html, base_url)
     link_gap = max(0, link_min - actual_links)
     fresh_days = _freshness_days(entry)
-    gsc_score, striking, hi_impr = _gsc_signals(url, gsc_page_data)
+    opp = gsc_opportunity(gsc_page_data.get(url, []), weights)
+    gsc_score, striking, hi_impr = opp["score"], opp["striking"], opp["ctr_capture"]
 
     score = (
         w_audit * audit_count +
@@ -116,8 +132,8 @@ def score_slug(slug, entry, cfg, budgets, gsc_page_data, content_root):
     for q in hi_impr[:2]:
         if q not in striking:
             findings.append(
-                f"[gsc] high-impr/low-CTR: \"{q['query']}\" "
-                f"({q['impressions']} impr, {q['ctr']*100:.1f}% CTR)"
+                f"[ctr-capture] pos {q['position']:.1f} \"{q['query']}\" "
+                f"({q['impressions']} impr, {q['ctr']*100:.1f}% CTR) — title/meta fix"
             )
 
     return {
@@ -129,6 +145,10 @@ def score_slug(slug, entry, cfg, budgets, gsc_page_data, content_root):
         "freshness_days": fresh_days,
         "gsc_score": round(gsc_score, 2),
         "striking_count": len(striking),
+        "ctr_capture": [
+            f"pos {q['position']:.1f} \"{q['query']}\" ({q['impressions']} impr)"
+            for q in hi_impr
+        ],
         "findings": findings,
     }
 
@@ -156,6 +176,14 @@ def _render_md(ranked, site, gsc_wired):
         for f in r["findings"]:
             lines.append(f"  - {f}")
         lines.append("")
+    capture = [r for r in ranked if r.get("ctr_capture")]
+    if capture:
+        lines += ["## CTR-capture quick wins (rank well, ~0 clicks — fix title/meta)", ""]
+        for r in capture:
+            lines.append(f"### {r['slug']} — {r['status']}")
+            for c in r["ctr_capture"]:
+                lines.append(f"  - {c}")
+            lines.append("")
     return "\n".join(lines)
 
 

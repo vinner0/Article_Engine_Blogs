@@ -23,11 +23,18 @@ require_above_fold_image: true
 
 # Triage scoring weights (triage.py)
 # score = audit*errors + link_gap*gap + freshness*(days/30) + gsc*gsc_score
+# gsc_score = gsc_striking*N_striking + gsc_ctr_gap*N_ctr_capture + gsc_clicks*sqrt(clicks)
 triage_weights:
-  audit: 3.0       # per failed error check
-  link_gap: 2.0    # per missing internal sibling link
-  freshness: 1.0   # multiplied by days_since_improved/30
-  gsc: 1.0         # multiplied by striking-distance + slip count
+  audit: 3.0          # per failed error check
+  link_gap: 2.0       # per missing internal sibling link
+  freshness: 1.0      # multiplied by days_since_improved/30
+  gsc: 1.0            # overall multiplier on gsc_score
+  gsc_striking: 1.0   # per striking-distance query (pos 5-20)
+  gsc_ctr_gap: 1.5    # per CTR-capture query (ranks well, ~0 clicks) — cheap wins
+  gsc_clicks: 0.5     # multiplied by sqrt(total clicks) — reward proven demand
+  striking_min_impr: 10   # min impressions to count a striking-distance query
+  ctr_gap_min_impr: 50    # min impressions to count a CTR-capture query
+  ctr_gap_max_ctr: 0.03   # CTR below this (at pos<=10) = capture failure
 
 # Sitemaps to crawl for course-page candidates
 external_sitemaps:
