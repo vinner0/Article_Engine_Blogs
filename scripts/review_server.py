@@ -11,7 +11,7 @@ import io
 import pathlib
 import contextlib
 
-from flask import Flask, request, redirect, url_for, flash, render_template_string
+from flask import Flask, request, redirect, url_for, flash, render_template_string, send_from_directory
 from markupsafe import Markup
 
 from scripts.lib import review
@@ -19,6 +19,13 @@ from scripts import apply_improvement
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SITES = ["trainingint"]
+
+PREVIEW_CSS = (
+    "<style>body{font:16px/1.6 Georgia,serif;max-width:720px;margin:16px auto;"
+    "padding:0 18px;color:#222}img{max-width:100%;height:auto}h1,h2,h3{font-family:"
+    "-apple-system,Segoe UI,sans-serif;line-height:1.25}.ae-course-card{font-family:"
+    "-apple-system,Segoe UI,sans-serif}</style>"
+)
 
 app = Flask(__name__)
 app.secret_key = "ae-review-local"  # local-only tool; not exposed to the network
@@ -59,6 +66,18 @@ PAGE = """
       <code>{{ p.slug }}</code><span class="pill">{{ p.status }}{% if p.status=='scheduled' and p.scheduled_date %} · publishes {{ p.scheduled_date }}{% endif %}</span>
       {% if p.url %} · <a href="{{ p.url }}" target="_blank">view live (before)</a>{% endif %}
       {% if p.edit_url %} · <a href="{{ p.edit_url }}" target="_blank">edit in WordPress</a>{% endif %}
+    </div>
+    <div class="panes" style="display:flex;gap:10px;margin:12px 0">
+      <div style="flex:1">
+        <div class="tag">before</div>
+        <iframe src="{{ url_for('preview', site=p.site, slug=p.slug, which='before') }}"
+                style="width:100%;height:520px;border:1px solid #ddd;border-radius:8px"></iframe>
+      </div>
+      <div style="flex:1">
+        <div class="tag">after (proposed)</div>
+        <iframe src="{{ url_for('preview', site=p.site, slug=p.slug, which='after') }}"
+                style="width:100%;height:520px;border:1px solid #ddd;border-radius:8px"></iframe>
+      </div>
     </div>
     <div class="diff">
       {% if p.blocks %}
@@ -101,6 +120,21 @@ def _pending_with_diffs():
 @app.route("/")
 def index():
     return render_template_string(PAGE, pending=_pending_with_diffs())
+
+
+@app.route("/preview/<site>/<slug>/<which>")
+def preview(site, slug, which):
+    rel = review.IMPROVE_REL if which == "after" else review.DRAFT_REL
+    p = ROOT / "content" / site / slug / rel[0] / rel[1]
+    text = p.read_text(encoding="utf-8") if p.exists() else ""
+    smap = review._status_map(ROOT, site)
+    body = review.resolve_preview(review.body_html(text), site, slug, smap)
+    return PREVIEW_CSS + body
+
+
+@app.route("/img/<site>/<slug>/<path:filename>")
+def preview_img(site, slug, filename):
+    return send_from_directory(ROOT / "content" / site / slug / "images", filename)
 
 
 @app.route("/save", methods=["POST"])
