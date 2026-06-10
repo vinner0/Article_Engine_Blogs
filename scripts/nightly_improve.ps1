@@ -29,7 +29,7 @@ if (-not (Test-Path $LOG_DIR)) { New-Item -ItemType Directory -Path $LOG_DIR | O
 
 $DATE   = (Get-Date -Format "yyyy-MM-dd")
 $LOG    = Join-Path $LOG_DIR "nightly-$DATE.log"
-$TOP_K  = if ($env:AE_TOP_K) { [int]$env:AE_TOP_K } else { 2 }
+$TOP_K  = if ($env:AE_TOP_K) { [int]$env:AE_TOP_K } else { 5 }
 $SKIP_LLM = ($env:AE_SKIP_LLM -eq "1")
 
 function Log($msg) {
