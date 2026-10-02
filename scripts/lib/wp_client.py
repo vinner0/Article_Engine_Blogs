@@ -38,6 +38,9 @@ class WPClient:
         # a cleanup failure must not raise and mask the primary result.
         requests.delete(f"{self.base}/posts/{pid}",params={"force":True},
                         auth=self.auth,timeout=self.timeout)
+    def list_future_posts(self):
+        """Scheduled (status=future) posts — id, slug, link, date_gmt. One page of 100 is plenty."""
+        return self._get("/posts",status="future",per_page=100,_fields="id,slug,link,date_gmt")
     def list_published_posts(self, per_page=100):
         """All published posts (type=post), following X-WP-TotalPages pagination.
 

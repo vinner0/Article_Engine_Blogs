@@ -91,9 +91,47 @@ function Send-CompletionEmail($subject, $body) {
 
 Log "=== nightly_improve start (Phase 1+2) ==="
 
+$sites = @("trainingint")
+$alerts = New-Object System.Collections.Generic.List[string]   # failure/staleness signals -> emailed even when nothing staged
+$rescued = New-Object System.Collections.Generic.List[string]
+
+function Send-AlertEmail {
+    if ($alerts.Count -eq 0) { return }
+    $b = @("The article engine needs attention:", "") + ($alerts | ForEach-Object { " - $_" })
+    if ($rescued.Count -gt 0) { $b += @("", "Missed-schedule posts published tonight:") + ($rescued | ForEach-Object { " - $_" }) }
+    $b += @("", "Run log: logs\nightly-$DATE.log")
+    Send-CompletionEmail "AE Nightly ${DATE}: $($alerts.Count) issue(s) need attention" ($b -join "`n")
+}
+
+# ─── Phase 0: publish missed-schedule posts + check queue runway ──────────────
+# trainingint's WP pseudo-cron silently dropped 5 scheduled posts (Jul 2026).
+
+foreach ($site in $sites) {
+    $savedEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $out = & $PYTHON -m scripts.rescue_missed $site 2>&1
+    $rc = $LASTEXITCODE
+    $ErrorActionPreference = $savedEAP
+    $out | ForEach-Object { Log "  $_" }
+    if ($rc -ne 0) { $alerts.Add("${site}: missed-schedule check failed (exit $rc) - see log"); continue }
+    foreach ($line in $out) {
+        if ("$line" -match '^\[rescued\] (.+)$') { $rescued.Add("${site}: $($Matches[1])") }
+        if ("$line" -match '^\[runway\] (\d+) (\d+)$') {
+            $days = [int]$Matches[1]
+            # Weekly (Mondays) so an empty queue nags once a week, not every night.
+            if ($days -lt 14 -and (Get-Date).DayOfWeek -eq 'Monday') {
+                $alerts.Add("${site}: only $days day(s) of scheduled posts left ($($Matches[2]) queued) - run a new /ae-batch")
+            }
+        }
+    }
+    if ($rescued.Count -gt 0) {
+        Log "${site}: $($rescued.Count) missed post(s) published - syncing status"
+        & $PYTHON -m scripts.sync_status $site 2>&1 | ForEach-Object { Log "  $_" }
+    }
+}
+
 # ─── Phase 1: triage ──────────────────────────────────────────────────────────
 
-$sites = @("trainingint")
 $triageJsonPaths = @{}
 
 foreach ($site in $sites) {
@@ -101,10 +139,14 @@ foreach ($site in $sites) {
     try {
         $out = & $PYTHON -m scripts.triage $site 2>&1
         $out | ForEach-Object { Log "  $_" }
+        if ($out | Where-Object { "$_" -match 'GSC unavailable' }) {
+            $alerts.Add("${site}: Search Console auth failed - triage is running blind. Re-auth: python scripts\gsc_auth.py")
+        }
         $triageJsonPaths[$site] = "$ROOT\status\triage-$site-$DATE.json"
         Log "$site triage OK -> $($triageJsonPaths[$site])"
     } catch {
         Log "ERROR triaging ${site}: $_"
+        $alerts.Add("${site}: triage failed - $_")
         $triageJsonPaths[$site] = $null
     }
 }
@@ -123,6 +165,8 @@ try {
     Log "claude CLI: $claudeVersion"
 } catch {
     Log "ERROR: claude CLI not found - skipping Phase 2. Add claude to PATH or set AE_SKIP_LLM=1."
+    $alerts.Add("claude CLI not found - no improvements can run")
+    Send-AlertEmail
     Log "=== nightly_improve done (Phase 1 only) ==="
     exit 0
 }
@@ -242,6 +286,11 @@ if ($allDigestLines.Count -gt 0) {
     Log "Apply: python -m scripts.apply_improvement trainingint <slug> [slug...]"
 } else {
     Log "No improvements staged tonight"
+    # Jammed/empty loop: same message 3 runs in a row (tonight's log included).
+    $recent = Get-ChildItem $LOG_DIR -Filter "nightly-*.log" | Sort-Object Name | Select-Object -Last 3
+    if ($recent.Count -eq 3 -and -not ($recent | Where-Object { -not (Select-String -Path $_.FullName -Pattern 'No improvements staged tonight' -Quiet) })) {
+        $alerts.Add("No improvements staged for 3 runs in a row - review queue jammed or nothing qualifies (check triage + skip lines in log)")
+    }
 }
 
 # ─── Completion email (only when something is staged) ─────────────────────────
@@ -264,6 +313,16 @@ if ($nStaged -gt 0) {
     }
 
     $body = New-Object System.Collections.Generic.List[string]
+    if ($alerts.Count -gt 0) {
+        $body.Add("NEEDS ATTENTION:")
+        foreach ($a in $alerts) { $body.Add(" - $a") }
+        $body.Add("")
+    }
+    if ($rescued.Count -gt 0) {
+        $body.Add("Missed-schedule posts published tonight:")
+        foreach ($r in $rescued) { $body.Add(" - $r") }
+        $body.Add("")
+    }
     $body.Add("$nStaged article(s) were optimised tonight and are STAGED for your approval.")
     $body.Add("Nothing is live yet - you decide what to apply.")
     $body.Add("")
@@ -327,8 +386,10 @@ if ($nStaged -gt 0) {
 
     $subject = "AE Nightly ${DATE}: $nStaged article(s) optimised - approval needed"
     Send-CompletionEmail $subject ($body -join "`n")
+} elseif ($alerts.Count -gt 0) {
+    Send-AlertEmail
 } else {
-    Log "No articles staged - completion email skipped (only sends when something is staged)"
+    Log "No articles staged and no issues - email skipped"
 }
 
 Log "=== nightly_improve done ==="
