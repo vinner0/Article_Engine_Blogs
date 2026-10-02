@@ -54,6 +54,9 @@ helper `/ae/v1/meta` route automatically (spec §8.4).
 
 ## After publish
 Update status/trainingint.yaml: slug → {status: scheduled, scheduled_date, wp_post_id}.
+Then run `python -m scripts.course_box trainingint` (idempotent) so the post gets its
+`ae_course` tag and renders the in-article course box. A slug missing from
+courses/trainingint.yaml gets no box — add it to a course cluster first.
 Surface: post id, scheduled date, wp-admin edit URL
 (https://www.trainingint.com/wp-admin/post.php?post=<id>&action=edit), and any
 unresolved sibling links returned (they were dropped to plain text — they re-link

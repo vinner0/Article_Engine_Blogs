@@ -1,0 +1,39 @@
+# In-article course box copy, per course id (courses/<site>.yaml). Pushed to the WP option
+# `ae_course_boxes` by scripts/course_box.py; rendered by wp-helper-plugin/ae-helper.php.
+# Funding claims must match the live course page. Owner-approved before go-live.
+trainingint:
+  writing-professional-emails:
+    name: Writing Professional Emails (WSQ)
+    pitch: Write clear, confident work emails that get replies, with real Singapore workplace scenarios and trainer feedback.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  excel:
+    name: Excel Training — Basic to Advanced (WSQ)
+    pitch: Go from formulas to pivot tables, lookups and dashboards in a hands-on class with practice files you keep.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See Excel courses & dates
+  copilot:
+    name: Word, Excel, PowerPoint & Copilot in Microsoft 365 (WSQ)
+    pitch: Use Copilot across Word, Excel, PowerPoint and Teams to draft, analyse and present faster, on your real work tasks.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  powerpoint:
+    name: WSQ PowerPoint Course
+    pitch: Build clean, persuasive slides with animations, transitions and presenter tools in a hands-on class.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  power-bi:
+    name: Data Analytics & Visualization with Power BI (WSQ)
+    pitch: Turn Excel and database data into interactive Power BI dashboards. Build your own report, step by step, in class.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  power-automate:
+    name: Mastering Power Apps & Power Automate (WSQ)
+    pitch: Automate approvals, emails and repetitive tasks, and build simple business apps with no coding background needed.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  canva:
+    name: Master Canva Designs (WSQ)
+    pitch: Design social posts, slides, EDMs and brand assets that look professional, even if you're not a designer.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
