@@ -206,7 +206,7 @@ foreach ($site in $sites) {
         try {
             $savedEAP = $ErrorActionPreference
             $ErrorActionPreference = "Continue"
-            $result = & $CLAUDE --print $prompt --allowedTools "Bash,Read,Write,Edit,Glob" 2>$null
+            $result = & $CLAUDE --print $prompt --model sonnet --allowedTools "Bash,Read,Write,Edit,Glob" 2>$null
             $ErrorActionPreference = $savedEAP
 
             $resultText = $result -join "`n"
