@@ -206,7 +206,9 @@ foreach ($site in $sites) {
         try {
             $savedEAP = $ErrorActionPreference
             $ErrorActionPreference = "Continue"
-            $result = & $CLAUDE --print $prompt --model sonnet --allowedTools "Bash,Read,Write,Edit,Glob" 2>$null
+            # PS 5.1 passes embedded quotes to native exes unescaped, cutting Findings to `[[audit]`
+            $promptArg = $prompt -replace '(\\*)"', '$1$1\"'
+            $result = & $CLAUDE --print $promptArg --model sonnet --allowedTools "Bash,Read,Write,Edit,Glob" 2>$null
             $ErrorActionPreference = $savedEAP
 
             $resultText = $result -join "`n"
@@ -287,7 +289,7 @@ if ($allDigestLines.Count -gt 0) {
 } else {
     Log "No improvements staged tonight"
     # Jammed/empty loop: same message 3 runs in a row (tonight's log included).
-    $recent = Get-ChildItem $LOG_DIR -Filter "nightly-*.log" | Sort-Object Name | Select-Object -Last 3
+    $recent = @(Get-ChildItem $LOG_DIR -Filter "nightly-*.log" | Sort-Object Name | Select-Object -Last 3)
     if ($recent.Count -eq 3 -and -not ($recent | Where-Object { -not (Select-String -Path $_.FullName -Pattern 'No improvements staged tonight' -Quiet) })) {
         $alerts.Add("No improvements staged for 3 runs in a row - review queue jammed or nothing qualifies (check triage + skip lines in log)")
     }
@@ -295,7 +297,7 @@ if ($allDigestLines.Count -gt 0) {
 
 # ─── Completion email (only when something is staged) ─────────────────────────
 
-$errCount = (Get-Content $LOG | Where-Object { $_ -match '\b(ERROR|WARN)\b' }).Count
+$errCount = @(Get-Content $LOG | Where-Object { $_ -match '\b(ERROR|WARN)\b' }).Count
 $nStaged  = $stagedRecords.Count
 
 if ($nStaged -gt 0) {
