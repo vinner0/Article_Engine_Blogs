@@ -55,6 +55,7 @@ PAGE = """
   .empty{color:#888;padding:40px 0;text-align:center}
   .nochanges{color:#999;font-style:italic}
 </style></head><body>
+<script src="http://localhost:5000/static/js/hub-nav.js" defer></script>
 <h1>Article improvements awaiting review</h1>
 <div class="sub">{{ pending|length }} staged · Approve posts to WordPress (live republish, or updates the scheduled draft) · Reject discards</div>
 {% with msgs = get_flashed_messages() %}{% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}{% endwith %}
