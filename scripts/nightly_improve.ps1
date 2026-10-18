@@ -174,6 +174,14 @@ try {
 $allDigestLines = @()
 $stagedRecords  = @()   # rich per-article records for the completion email
 
+# [ae5-noop] = ran fine, nothing to do. Skip that slug for 7 days so top-K reaches other articles.
+$NOOP_PATH = "$ROOT\status\ae5-noop.json"
+$noopSeen  = @{}   # "site/slug" -> yyyy-MM-dd of last noop
+if (Test-Path $NOOP_PATH) {
+    (Get-Content $NOOP_PATH -Raw | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $noopSeen[$_.Name] = $_.Value }
+}
+$noopCutoff = (Get-Date).AddDays(-7).ToString("yyyy-MM-dd")
+
 foreach ($site in $sites) {
     $jsonPath = $triageJsonPaths[$site]
     if (-not $jsonPath -or -not (Test-Path $jsonPath)) {
@@ -182,8 +190,9 @@ foreach ($site in $sites) {
     }
 
     $triage = Get-Content $jsonPath -Raw | ConvertFrom-Json
-    $candidates = $triage.ranked | Select-Object -First $TOP_K
-    Log "${site}: top-$TOP_K candidates for improvement"
+    $noopSkipped = @($triage.ranked | Where-Object { $noopSeen["$site/$($_.slug)"] -gt $noopCutoff })
+    $candidates = $triage.ranked | Where-Object { -not ($noopSeen["$site/$($_.slug)"] -gt $noopCutoff) } | Select-Object -First $TOP_K
+    Log "${site}: top-$TOP_K candidates for improvement ($($noopSkipped.Count) skipped: ae5-noop within 7 days)"
 
     $siteDigestLines = @()
 
@@ -218,6 +227,8 @@ foreach ($site in $sites) {
             $skipLine = ($result | Where-Object { $_ -match '\[ae5-skip\]' } | Select-Object -Last 1)
             if ($okLine)   { $okLine   = $okLine.Trim('`').Trim() }
             if ($skipLine) { $skipLine = $skipLine.Trim('`').Trim() }
+            $noopLine = ($result | Where-Object { $_ -match '\[ae5-noop\]' } | Select-Object -Last 1)
+            if ($noopLine) { $noopLine = $noopLine.Trim('`').Trim() }
 
             if ($okLine -and (Test-Path $improvePath)) {
                 $siteDigestLines += $okLine
@@ -233,8 +244,12 @@ foreach ($site in $sites) {
                 Log "  WARN: $slug - [ae5-ok] signal but no _improve\04-seo.html on disk; not staged"
             } elseif ($skipLine) {
                 Log "  SKIP: $skipLine"
+            } elseif ($noopLine) {
+                Log "  NOOP: $noopLine"
+                $noopSeen["$site/$slug"] = $DATE
+                $noopSeen | ConvertTo-Json | Set-Content $NOOP_PATH -Encoding utf8
             } else {
-                Log "  WARN: $slug - no [ae5-ok/skip] signal from ae5"
+                Log "  WARN: $slug - no [ae5-ok/skip/noop] signal from ae5"
                 Log "  --- ae5 output (last 10 lines) ---"
                 $result | Select-Object -Last 10 | ForEach-Object { Log "    $_" }
                 Log "  --- end ae5 output ---"
