@@ -94,6 +94,15 @@ courses:
       - { slug: how-to-send-emails-with-power-automate, primary_keyword: how to use power automate to send emails, status: idea }
       - { slug: how-to-share-a-power-automate-desktop-flow, primary_keyword: how to share power automate desktop flow, status: idea }
 
+  - id: python
+    course_url: https://www.trainingint.com/python-programming-course-for-beginners
+    pillar: data-skills
+    secondary_courses:
+      - https://www.trainingint.com/analyze-visualize-with-power-bi
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/python.csv
+    cluster:
+      - { slug: how-to-find-duplicates-in-a-python-list, primary_keyword: how to find duplicates in a python list, status: published }
+
   - id: canva
     course_url: https://www.trainingint.com/canva-design-masterclass
     pillar: design-tools

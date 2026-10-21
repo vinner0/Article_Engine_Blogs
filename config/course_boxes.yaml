@@ -1,6 +1,32 @@
 # In-article course box copy, per course id (courses/<site>.yaml). Pushed to the WP option
 # `ae_course_boxes` by scripts/course_box.py; rendered by wp-helper-plugin/ae-helper.php.
 # Funding claims must match the live course page. Owner-approved before go-live.
+intellisoft:
+  claude-code-codex:
+    name: Build Agentic AI Apps with Claude Code & Codex
+    pitch: Hands-on with the same AI coding agents used in this article — build real automations, no prior coding required.
+    funding: UTAP-approved (course #1022) · S$250-500/yr NTUC funding · WSQ-funded, SkillsFuture Credit eligible
+    cta: See dates & fees
+  agentic-ai-nocode:
+    name: Create Agentic AI Automations Without Coding
+    pitch: Turn repetitive work into AI agents that act on their own, using no-code tools you can apply the same week.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  sql:
+    name: Introduction to SQL
+    pitch: Query and join real tables with confidence, the foundation skill behind every data-analyst role.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  power-query:
+    name: Power Query & Power Pivot for Deep Analysis with Excel
+    pitch: Clean and merge messy data automatically in Excel, then model it for real analysis, not manual copy-paste.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  power-bi:
+    name: Data Analytics & Visualization with Power BI
+    pitch: Build interactive Power BI dashboards from your own data, step by step, in a hands-on class.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
 trainingint:
   writing-professional-emails:
     name: Writing Professional Emails (WSQ)
@@ -30,6 +56,11 @@ trainingint:
   power-automate:
     name: Mastering Power Apps & Power Automate (WSQ)
     pitch: Automate approvals, emails and repetitive tasks, and build simple business apps with no coding background needed.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  python:
+    name: Python Programming Course for Beginners (WSQ)
+    pitch: Learn real Python fundamentals — lists, loops, functions and data handling — with a trainer, not just a video.
     funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
     cta: See dates & fees
   canva:

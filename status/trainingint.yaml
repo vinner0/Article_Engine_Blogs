@@ -50,9 +50,9 @@ how-to-build-a-resume-in-canva:
 how-to-create-a-powerpoint-with-copilot:
   last_improved: '2026-06-14'
   scheduled_date: '2026-10-10T06:00:00+08:00'
-  status: scheduled
+  status: published
   title: How to Use Copilot to Create a PowerPoint (2026) | Intellisoft Singapore
-  url: https://www.trainingint.com/?p=17840
+  url: https://www.trainingint.com/how-to-create-a-powerpoint-with-copilot.html
   wp_post_id: 17840
 how-to-create-drop-down-lists-in-excel:
   last_improved: '2026-07-01'
@@ -88,6 +88,10 @@ how-to-export-power-bi-to-powerpoint:
   title: How to Export Power BI to PowerPoint (Step by Step)
   url: https://www.trainingint.com/how-to-export-power-bi-to-powerpoint.html
   wp_post_id: 17760
+how-to-find-duplicates-in-a-python-list:
+  status: published
+  url: https://www.trainingint.com/how-to-find-duplicates-in-a-python-list.html
+  wp_post_id: 12156
 how-to-filter-data-in-excel-step-by-step:
   last_improved: '2026-06-07'
   scheduled_date: 2026-05-21
@@ -95,6 +99,7 @@ how-to-filter-data-in-excel-step-by-step:
   url: https://www.trainingint.com/how-to-filter-data-in-excel-step-by-step.html
   wp_post_id: 17421
 how-to-install-power-automate-desktop:
+  last_improved: '2026-10-17'
   scheduled_date: '2026-06-19T09:00:00+08:00'
   status: published
   title: How to Install Power Automate Desktop (Step-by-Step Guide)
@@ -102,9 +107,9 @@ how-to-install-power-automate-desktop:
   wp_post_id: 17695
 how-to-loop-a-powerpoint-presentation:
   scheduled_date: '2026-10-06T06:00:00+08:00'
-  status: scheduled
+  status: published
   title: How to Loop a PowerPoint Presentation (2026) | Intellisoft Singapore
-  url: https://www.trainingint.com/?p=17828
+  url: https://www.trainingint.com/how-to-loop-a-powerpoint-presentation.html
   wp_post_id: 17828
 how-to-make-a-gantt-chart-in-excel:
   scheduled_date: '2026-07-28T09:00:00+08:00'
@@ -126,9 +131,9 @@ how-to-make-money-with-canva:
   wp_post_id: 17766
 how-to-remove-a-background-in-canva:
   scheduled_date: '2026-10-08T06:00:00+08:00'
-  status: scheduled
+  status: published
   title: How to Remove a Background in Canva (2026) | Intellisoft Singapore
-  url: https://www.trainingint.com/?p=17834
+  url: https://www.trainingint.com/how-to-remove-a-background-in-canva.html
   wp_post_id: 17834
 how-to-send-emails-with-power-automate:
   scheduled_date: '2026-06-26T09:00:00+08:00'
@@ -143,6 +148,7 @@ how-to-share-a-power-automate-desktop-flow:
   url: https://www.trainingint.com/how-to-share-a-power-automate-desktop-flow.html
   wp_post_id: 17741
 how-to-use-canva:
+  last_improved: '2026-10-17'
   scheduled_date: '2026-06-15T09:00:00+08:00'
   status: published
   title: 'How to Use Canva: A Complete Beginner''s Guide (2026)'
@@ -150,11 +156,12 @@ how-to-use-canva:
   wp_post_id: 17672
 how-to-use-canva-templates:
   scheduled_date: '2026-10-13T06:00:00+08:00'
-  status: scheduled
+  status: published
   title: 'How to Use Canva Templates: Step-by-Step (2026) | Intellisoft Singapore'
-  url: https://www.trainingint.com/?p=17846
+  url: https://www.trainingint.com/how-to-use-canva-templates.html
   wp_post_id: 17846
 how-to-use-copilot:
+  last_improved: '2026-10-17'
   scheduled_date: '2026-07-13T09:00:00+08:00'
   status: published
   title: 'How to Use Microsoft 365 Copilot: A Beginner''s Guide (2026) | Intellisoft
@@ -191,9 +198,9 @@ how-to-use-copilot-in-word:
   wp_post_id: 17463
 how-to-use-copilot-to-take-meeting-notes:
   scheduled_date: '2026-10-03T06:00:00+08:00'
-  status: scheduled
+  status: published
   title: How to Use Copilot to Take Meeting Notes (2026) | Intellisoft Singapore
-  url: https://www.trainingint.com/?p=17823
+  url: https://www.trainingint.com/how-to-use-copilot-to-take-meeting-notes.html
   wp_post_id: 17823
 how-to-use-multiple-if-statements-in-excel:
   scheduled_date: '2026-07-24T09:00:00+08:00'
@@ -202,6 +209,7 @@ how-to-use-multiple-if-statements-in-excel:
   url: https://www.trainingint.com/how-to-use-multiple-if-statements-in-excel.html
   wp_post_id: 17851
 how-to-use-power-automate:
+  last_improved: '2026-10-17'
   scheduled_date: '2026-06-12T09:00:00+08:00'
   status: published
   title: 'How to Use Power Automate: A Beginner''s Guide for 2026'
@@ -282,6 +290,7 @@ power-bi-conditional-formatting-a-complete-guide:
   url: https://www.trainingint.com/power-bi-conditional-formatting-a-complete-guide.html
   wp_post_id: 17084
 power-bi-data-visualization-guide:
+  last_improved: '2026-10-17'
   scheduled_date: '2026-06-18T09:00:00+08:00'
   status: published
   title: 'Data Visualization with Power BI: 10 Chart Types Guide'

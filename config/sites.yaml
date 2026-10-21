@@ -1,4 +1,48 @@
 sites:
+  intellisoft:
+    base_url: https://www.intellisoft.com.sg
+    gsc_property: https://www.intellisoft.com.sg/
+    wp_api_base: https://www.intellisoft.com.sg/wp-json/wp/v2
+    ae_api_base: https://www.intellisoft.com.sg/wp-json/ae/v1
+    app_password_env: WP_INTELLISOFT
+    cadence:
+      per_week: 5
+      days:
+      - Mon
+      - Tue
+      - Wed
+      - Thu
+      - Fri
+    link_budget:
+      internal_sibling_min: 2
+      internal_sibling_max: 3
+      primary_course_distinct: 1
+      primary_course_occurrences_max: 3
+      secondary_course_max: 3
+      authoritative_outbound_min: 1
+      authoritative_outbound_max: 3
+    author:
+      name: Vinai Prakash
+      url: https://www.vinaiprakash.com
+      same_as:
+      - https://www.vinaiprakash.com
+      - https://www.youtube.com/@excelchamp
+    seo_title:
+      brand_suffix: Intellisoft Systems
+      append_year: true
+    probe:
+      rest_ok: true
+      seo_plugin: yoast
+      seo_meta_rest_writable: true
+      seo_plugin_emits_graph: true   # assumed from trainingint's Yoast default; not independently probed, same plugin
+      uid_roundtrip_ok: true
+      html_renders_ok: true          # verified 2026-10-21: homepage 200, renders normally
+      wpcron_reliable: true          # assumed from trainingint's same-host default; revisit if scheduled posts miss
+      default_category_id: 357       # "Agentic AI Coding Courses" - matches first cluster (claude-code-codex)
+      default_author_id: 2           # vp / Vinai Prakash
+      media_max_bytes: 8388608       # assumed same 8MB limit as trainingint (same hosting pattern); not independently probed
+      keyword_data: ubersuggest_csv
+      probed_at: '2026-10-21'
   trainingint:
     base_url: https://www.trainingint.com
     gsc_property: https://www.trainingint.com/
@@ -20,27 +64,26 @@ sites:
       primary_course_occurrences_max: 3
       secondary_course_max: 3
       authoritative_outbound_min: 1
-      authoritative_outbound_max: 3   # bumped 2->3 (SEO audit 2026-05-24): allow 2-3 authority outbounds
-    author:                            # E-E-A-T author identity (jsonld.py author_same_as).
-      name: Vinai Prakash              # NOTE: trainingint suppresses Article schema (Yoast emits
-      url: https://www.vinaiprakash.com  # the @graph), so these are latent here — the LIVE lever is
-      same_as:                         # Yoast > Person sameAs. Engine uses these for any site with
-        - https://www.vinaiprakash.com #   seo_plugin_emits_graph: false and for portability.
-        - https://www.youtube.com/@excelchamp
-        # - https://www.linkedin.com/in/<confirm-handle>   # TODO Vinai: add exact LinkedIn URL here + in Yoast Person
+      authoritative_outbound_max: 3
+    author:
+      name: Vinai Prakash
+      url: https://www.vinaiprakash.com
+      same_as:
+      - https://www.vinaiprakash.com
+      - https://www.youtube.com/@excelchamp
     seo_title:
-      brand_suffix: Intellisoft Singapore   # appended to SEO <title> (audit: title was geo/brand-blind)
-      append_year: true                      # append the current year for freshness
+      brand_suffix: Intellisoft Singapore
+      append_year: true
     probe:
       rest_ok: true
-      seo_plugin: yoast            # manual override 2026-05-20: detect_seo_plugin returned "none" because Yoast doesn't show_in_rest=true its meta keys; confirmed yoast via active_plugins debug + verify_yoast_helper.py probe. See observation log.
-      seo_meta_rest_writable: false  # correct: Yoast meta isn't REST-writable; publish flow routes via /ae/v1/meta (verified on live).
-      seo_plugin_emits_graph: true   # verified 2026-05-20: <script class="yoast-schema-graph"> with @graph array present on homepage. ae-6 must suppress its own Article/Breadcrumb/Organization JSON-LD to avoid duplication.
+      seo_plugin: yoast
+      seo_meta_rest_writable: false
+      seo_plugin_emits_graph: true
       uid_roundtrip_ok: true
-      html_renders_ok: true          # site is live and renders normally; revisit if PHP errors appear.
-      wpcron_reliable: true          # owner: default pseudo-cron acceptable on this site (steady traffic). If scheduled posts start missing, switch to real cron via Hostinger hPanel.
-      default_category_id: 175       # soft-skills (5 existing posts) — matches first cluster (writing-professional-emails) and most planned business-skills content.
-      default_author_id: 1           # itpladmin / Vinai Prakash.
-      media_max_bytes: 8388608       # 8 MB — binding limit from prod wp-config (post_max_size 8M, smaller than upload_max_filesize 20M).
-      keyword_data: ubersuggest_csv  # ae-1 expects an Ubersuggest CSV export per cluster.
+      html_renders_ok: true
+      wpcron_reliable: true
+      default_category_id: 175
+      default_author_id: 1
+      media_max_bytes: 8388608
+      keyword_data: ubersuggest_csv
       probed_at: '2026-05-20'

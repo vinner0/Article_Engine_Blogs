@@ -1,0 +1,54 @@
+site: intellisoft
+courses:
+  - id: claude-code-codex
+    course_url: https://www.intellisoft.com.sg/build-agentic-ai-apps-with-claude-code-codex.html
+    pillar: ai-tools
+    secondary_courses:
+      - https://www.intellisoft.com.sg/create-agentic-ai-automations-without-coding.html
+      - https://www.intellisoft.com.sg/digital-transformation-with-ai-tools.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/claude-code-codex.csv
+    cluster:
+      - { slug: how-to-use-claude-code-for-automation, primary_keyword: how to use claude code, status: idea }
+      - { slug: claude-code-vs-codex-which-should-you-learn, primary_keyword: claude code vs codex, status: idea }
+
+  - id: agentic-ai-nocode
+    course_url: https://www.intellisoft.com.sg/create-agentic-ai-automations-without-coding.html
+    pillar: ai-tools
+    secondary_courses:
+      - https://www.intellisoft.com.sg/build-agentic-ai-apps-with-claude-code-codex.html
+      - https://www.intellisoft.com.sg/power-apps-power-automate-masterclass.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/agentic-ai.csv
+    cluster:
+      - { slug: what-is-agentic-ai-and-how-does-it-work, primary_keyword: what is agentic ai, status: idea }
+      - { slug: how-to-build-an-ai-agent-without-coding, primary_keyword: build ai agent no code, status: idea }
+
+  - id: sql
+    course_url: https://www.intellisoft.com.sg/sql-training-singapore.html
+    pillar: data-skills
+    secondary_courses:
+      - https://www.intellisoft.com.sg/power-bi-training-singapore.html
+      - https://www.intellisoft.com.sg/data-analysis-with-python.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/sql.csv
+    cluster:
+      - { slug: how-to-write-a-sql-join-query, primary_keyword: sql join query, status: idea }
+      - { slug: sql-for-beginners-where-to-start, primary_keyword: learn sql beginners, status: idea }
+
+  - id: power-query
+    course_url: https://www.intellisoft.com.sg/power-query-power-pivot-for-excel.html
+    pillar: microsoft-power-platform
+    secondary_courses:
+      - https://www.intellisoft.com.sg/power-bi-training-singapore.html
+      - https://www.intellisoft.com.sg/advanced-excel-training.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/power-query.csv
+    cluster:
+      - { slug: how-to-use-power-query-in-excel, primary_keyword: how to use power query, status: idea }
+
+  - id: power-bi
+    course_url: https://www.intellisoft.com.sg/power-bi-training-singapore.html
+    pillar: microsoft-power-platform
+    secondary_courses:
+      - https://www.intellisoft.com.sg/power-query-power-pivot-for-excel.html
+      - https://www.intellisoft.com.sg/advanced-power-bi.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/power-bi.csv
+    cluster:
+      - { slug: power-bi-vs-excel-which-should-you-learn, primary_keyword: power bi vs excel, status: idea }
