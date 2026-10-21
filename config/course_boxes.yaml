@@ -37,6 +37,21 @@ intellisoft:
     pitch: Put Copilot to work across Word, Excel, PowerPoint and Teams on your own real tasks, not just demos.
     funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
     cta: See dates & fees
+  excel-advanced:
+    name: Advanced Excel Training
+    pitch: Go beyond the basics with pivot tables, lookups and advanced formulas you'll use the same week.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  excel-hr:
+    name: Excel for Human Resources
+    pitch: Build the exact payroll, CPF and headcount calculations this article covers, in a class built for HR.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  excel-basic:
+    name: Basic Data Analytics with Excel for Beginners
+    pitch: Get comfortable with Excel's everyday tools and shortcuts before moving on to pivot tables and formulas.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
 trainingint:
   writing-professional-emails:
     name: Writing Professional Emails (WSQ)

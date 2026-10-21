@@ -80,3 +80,31 @@ courses:
     keyword_csv: SEO_KEYWORD_DATA_DUMPS/copilot-m365.csv
     cluster:
       - { slug: mastering-microsoft-365-copilot-build-ai-productivity-with-intellisoft, primary_keyword: microsoft 365 copilot productivity, status: published }
+
+  - id: excel-advanced
+    course_url: https://www.intellisoft.com.sg/advanced-excel-training.html
+    pillar: microsoft-office-skills
+    secondary_courses:
+      - https://www.intellisoft.com.sg/nicf-excel-vba-software-design.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/excel-advanced.csv
+    cluster:
+      - { slug: pivot-tables-in-microsoft-excel, primary_keyword: excel pivot tables, status: published }
+      - { slug: excel-lookup-functions, primary_keyword: excel lookup functions vlookup, status: published }
+
+  - id: excel-hr
+    course_url: https://www.intellisoft.com.sg/excel-for-human-resources.html
+    pillar: microsoft-office-skills
+    secondary_courses:
+      - https://www.intellisoft.com.sg/advanced-excel-training.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/excel-hr.csv
+    cluster:
+      - { slug: calculating-cpf-contribution-for-employees-in-singapore, primary_keyword: cpf contribution calculation excel, status: published }
+
+  - id: excel-basic
+    course_url: https://www.intellisoft.com.sg/basic-data-analytics-with-excel-for-beginners.html
+    pillar: microsoft-office-skills
+    secondary_courses:
+      - https://www.intellisoft.com.sg/advanced-excel-training.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/excel-basic.csv
+    cluster:
+      - { slug: do-you-know-the-4-ways-to-use-the-enter-key-in-excel, primary_keyword: excel enter key shortcuts, status: published }
