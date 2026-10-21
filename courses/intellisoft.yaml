@@ -10,6 +10,7 @@ courses:
     cluster:
       - { slug: how-to-use-claude-code-for-automation, primary_keyword: how to use claude code, status: idea }
       - { slug: claude-code-vs-codex-which-should-you-learn, primary_keyword: claude code vs codex, status: idea }
+      - { slug: no-code-agentic-ai-vs-claude-code-course-choose, primary_keyword: no code agentic ai vs claude code, status: published }
 
   - id: agentic-ai-nocode
     course_url: https://www.intellisoft.com.sg/create-agentic-ai-automations-without-coding.html
@@ -21,6 +22,9 @@ courses:
     cluster:
       - { slug: what-is-agentic-ai-and-how-does-it-work, primary_keyword: what is agentic ai, status: idea }
       - { slug: how-to-build-an-ai-agent-without-coding, primary_keyword: build ai agent no code, status: idea }
+      - { slug: what-is-agentic-ai-and-how-can-you-use-it-at-work, primary_keyword: what is agentic ai, status: published }
+      - { slug: comparing-agentic-ai-automation-tools-n8n-langflow-flowise-ai, primary_keyword: agentic ai automation tools, status: published }
+      - { slug: agentic-ai-for-small-business-practical-use-cases, primary_keyword: agentic ai small business, status: published }
 
   - id: sql
     course_url: https://www.intellisoft.com.sg/sql-training-singapore.html
@@ -32,6 +36,7 @@ courses:
     cluster:
       - { slug: how-to-write-a-sql-join-query, primary_keyword: sql join query, status: idea }
       - { slug: sql-for-beginners-where-to-start, primary_keyword: learn sql beginners, status: idea }
+      - { slug: what-is-sql, primary_keyword: what is sql, status: published }
 
   - id: power-query
     course_url: https://www.intellisoft.com.sg/power-query-power-pivot-for-excel.html
@@ -42,6 +47,8 @@ courses:
     keyword_csv: SEO_KEYWORD_DATA_DUMPS/power-query.csv
     cluster:
       - { slug: how-to-use-power-query-in-excel, primary_keyword: how to use power query, status: idea }
+      - { slug: how-to-clean-data-using-power-query, primary_keyword: how to clean data power query, status: published }
+      - { slug: reference-query-results-powerquery-tutorial, primary_keyword: power query reference results, status: published }
 
   - id: power-bi
     course_url: https://www.intellisoft.com.sg/power-bi-training-singapore.html
@@ -52,3 +59,24 @@ courses:
     keyword_csv: SEO_KEYWORD_DATA_DUMPS/power-bi.csv
     cluster:
       - { slug: power-bi-vs-excel-which-should-you-learn, primary_keyword: power bi vs excel, status: idea }
+      - { slug: data-model-creation-and-considerations-in-power-bi, primary_keyword: power bi data model, status: published }
+      - { slug: top-10-dax-expressions-in-power-bi, primary_keyword: power bi dax expressions, status: published }
+      - { slug: what-is-power-bi-a-must-have-skill-for-analysts-decision-makers, primary_keyword: what is power bi, status: published }
+
+  - id: excel-vba
+    course_url: https://www.intellisoft.com.sg/nicf-excel-vba-software-design.html
+    pillar: microsoft-office-skills
+    secondary_courses:
+      - https://www.intellisoft.com.sg/advanced-excel-training.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/excel-vba.csv
+    cluster:
+      - { slug: top-5-automations-with-excel-vba-macros, primary_keyword: excel vba macros automation, status: published }
+
+  - id: copilot-m365
+    course_url: https://www.intellisoft.com.sg/empower-your-workforce-with-copilot-for-microsoft-365-use-cases.html
+    pillar: ai-tools
+    secondary_courses:
+      - https://www.intellisoft.com.sg/digital-transformation-with-ai-tools.html
+    keyword_csv: SEO_KEYWORD_DATA_DUMPS/copilot-m365.csv
+    cluster:
+      - { slug: mastering-microsoft-365-copilot-build-ai-productivity-with-intellisoft, primary_keyword: microsoft 365 copilot productivity, status: published }

@@ -27,6 +27,16 @@ intellisoft:
     pitch: Build interactive Power BI dashboards from your own data, step by step, in a hands-on class.
     funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
     cta: See dates & fees
+  excel-vba:
+    name: Excel VBA Software Design
+    pitch: Automate the exact repetitive Excel tasks in this article with real VBA macros you build and keep.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
+  copilot-m365:
+    name: Empower Your Workforce With Microsoft 365 Copilot Use Cases
+    pitch: Put Copilot to work across Word, Excel, PowerPoint and Teams on your own real tasks, not just demos.
+    funding: WSQ-funded · up to 70% course fee grant · SkillsFuture Credit eligible
+    cta: See dates & fees
 trainingint:
   writing-professional-emails:
     name: Writing Professional Emails (WSQ)
